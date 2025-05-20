@@ -207,14 +207,6 @@ local PlayTab = Window:AddTab({
     Title = "Play",
     Icon = "rbxassetid://7734053495" -- Bạn có thể thay icon khác nếu muốn
 })
-
-function table.keys(tbl)
-    local result = {}
-    for k, _ in pairs(tbl) do
-        table.insert(result, k)
-    end
-    return result
-end
 -- Thêm tab Shop
 local ShopTab = Window:AddTab({
     Title = "Shop",
@@ -483,96 +475,65 @@ end)
 -- ...existing code...
 --shop 
 -- SHOP SECTION: Mua Pet Egg
-local ShopSection = ShopTab:AddSection("Mua Pet Egg")
 
--- Danh sách loại Egg và ID tương ứng
-local eggTypes = {
-    ["Common Egg"] = 1,
-    ["Uncommon Egg"] = 2,
-    ["Rare Egg"] = 3,
-    ["Legendary Egg"] = 4,
-    ["Mythical Egg"] = 5,
-    ["Bug Egg"] = 6,
-    ["Night Egg"] = 7
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local BuyPetEggEvent = ReplicatedStorage.GameEvents:WaitForChild("BuyPetEgg")
+
+local eggList = {
+    "Common Egg",
+    "Uncommon Egg",
+    "Rare Egg",
+    "Legendary Egg",
+    "Mythical Egg",
+    "Bug Egg",
+    "Night Egg",
 }
 
--- Biến lưu lựa chọn
-getgenv().SelectedEggs = {}
-getgenv().AutoBuyEggs = false
+local selectedEggs = {}
 
--- Dropdown chọn nhiều loại Egg
-ShopSection:AddDropdown("EggDropdown", {
-    Title = "Chọn loại Egg muốn mua",
-    Values = table.keys(eggTypes),
-    Multi = true,
+-- Tạo section trong Shop tab
+local EggShopSection = ShopTab:AddSection("Egg Shop")
+
+-- Tạo dropdown chọn nhiều egg
+EggShopSection:AddDropdown("SelectEggs", {
+    Title = "Select Egg(s) to Buy",
+    MultiSelect = true,
     Default = {},
+    Options = eggList,
     Callback = function(selected)
-        getgenv().SelectedEggs = selected
-        print("Đã chọn Egg:", table.concat(selected, ", "))
+        selectedEggs = selected
+        print("Selected eggs:", table.concat(selectedEggs, ", "))
     end
 })
 
--- Nút mua tất cả egg đã chọn
-ShopSection:AddButton({
-    Title = "Mua tất cả Egg đã chọn",
-    Callback = function()
-        for _, eggName in ipairs(getgenv().SelectedEggs) do
-            local eggId = eggTypes[eggName]
-            if eggId then
-                local args = { [1] = eggId }
-                game:GetService("ReplicatedStorage").GameEvents.BuyPetEgg:FireServer(unpack(args))
-                print("Đã mua:", eggName)
-                task.wait(0.3) -- Đợi nhẹ để tránh spam quá nhanh
-            end
-        end
-    end
-})
-
--- Toggle auto mua egg
-ShopSection:AddToggle("AutoBuyEggsToggle", {
-    Title = "Auto mua Egg",
+-- Tạo toggle auto buy egg
+EggShopSection:AddToggle("AutoBuyEggToggle", {
+    Title = "Auto Buy Egg",
     Default = false,
-    Callback = function(state)
-        getgenv().AutoBuyEggs = state
-        print("Auto Buy Egg:", state)
-    end
-})
-
--- Luồng auto mua egg liên tục
-task.spawn(function()
-    while true do
-        if getgenv().AutoBuyEggs then
-            for _, eggName in ipairs(getgenv().SelectedEggs) do
-                local eggId = eggTypes[eggName]
-                if eggId then
-                    local args = { [1] = eggId }
-                    pcall(function()
-                        game:GetService("ReplicatedStorage").GameEvents.BuyPetEgg:FireServer(unpack(args))
-                        print("Auto mua:", eggName)
-                    end)
-                    task.wait(0.5) -- Delay tránh overload server
+    Callback = function(value)
+        getgenv().AutoBuyEgg = value
+        print("Auto Buy Egg:", tostring(value))
+        
+        if value then
+            spawn(function()
+                while getgenv().AutoBuyEgg do
+                    if #selectedEggs == 0 then
+                        wait(1)
+                    else
+                        for _, eggName in pairs(selectedEggs) do
+                            local index = table.find(eggList, eggName)
+                            if index then
+                                pcall(function()
+                                    BuyPetEggEvent:FireServer(index)
+                                end)
+                                wait(0.5)
+                            end
+                        end
+                    end
+                    wait(1)
                 end
-            end
+            end)
         end
-        task.wait(1)
-    end
-end)
-
-
-
--- Dropdown chọn theme
-SettingsSection:AddDropdown("ThemeDropdown", {
-    Title = "Chọn Theme",
-    Values = {"Dark", "Light", "Darker", "Aqua", "Amethyst"},
-    Multi = false,
-    Default = ConfigSystem.CurrentConfig.UITheme or "Dark",
-    Callback = function(Value)
-        -- Gán vào bản sao để tránh readonly
-        local newConfig = table.clone(ConfigSystem.CurrentConfig)
-        newConfig.UITheme = Value
-        ConfigSystem.CurrentConfig = newConfig
-        ConfigSystem.SaveConfig()
-        print("Đã chọn theme: " .. Value)
     end
 })
 
