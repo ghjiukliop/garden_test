@@ -495,20 +495,21 @@ local eggList = {
 }
 
 local selectedEggs = {}
-
--- Tạo dropdown chọn nhiều egg
 EggShopSection:AddDropdown("SelectEggs", {
     Title = "Select Egg(s) to Buy",
     MultiSelect = true,
     Default = {},
     Options = eggList,
     Callback = function(selected)
-        selectedEggs = selected
+        if typeof(selected) == "table" then
+            selectedEggs = selected
+        else
+            selectedEggs = {}
+        end
         print("Selected eggs:", table.concat(selectedEggs, ", "))
     end
 })
 
--- Tạo toggle auto buy egg
 EggShopSection:AddToggle("AutoBuyEggToggle", {
     Title = "Auto Buy Egg",
     Default = false,
@@ -519,7 +520,7 @@ EggShopSection:AddToggle("AutoBuyEggToggle", {
         if value then
             spawn(function()
                 while getgenv().AutoBuyEgg do
-                    if #selectedEggs == 0 then
+                    if selectedEggs == nil or #selectedEggs == 0 then
                         wait(1)
                     else
                         for _, eggName in pairs(selectedEggs) do
@@ -538,6 +539,7 @@ EggShopSection:AddToggle("AutoBuyEggToggle", {
         end
     end
 })
+
 
 -- Tích hợp với SaveManager
 SaveManager:SetLibrary(Fluent)
