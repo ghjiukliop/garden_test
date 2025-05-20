@@ -480,65 +480,68 @@ end)
 
 -- Tạo section trong Shop tab
 local EggShopSection = ShopTab:AddSection("Egg Shop")
-
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local BuyPetEggEvent = ReplicatedStorage.GameEvents:WaitForChild("BuyPetEgg")
-
-local eggList = {
-    "Common Egg",
-    "Uncommon Egg",
-    "Rare Egg",
-    "Legendary Egg",
-    "Mythical Egg",
-    "Bug Egg",
-    "Night Egg",
+-- Danh sách các loại Egg
+local eggTypes = {
+    "Common Egg",      -- index 1
+    "Uncommon Egg",    -- index 2
+    "Rare Egg",        -- index 3
+    "Legendary Egg",   -- index 4
+    "Mythical Egg",    -- index 5
+    "Bug Egg",         -- index 6
+    "Night Egg"        -- index 7
 }
 
-local selectedEggs = {}
-EggShopSection:AddDropdown("SelectEggs", {
-    Title = "Select Egg(s) to Buy",
-    MultiSelect = true,
-    Default = {},
-    Options = eggList,
-    Callback = function(selected)
-        if typeof(selected) == "table" then
-            selectedEggs = selected
-        else
-            selectedEggs = {}
+local selectedEggs = {} -- Chứa trạng thái chọn
+
+-- Checkbox cho từng loại egg
+for i, eggName in ipairs(eggTypes) do
+    EggShopSection:AddToggle(eggName, {
+        Title = eggName,
+        Default = false,
+        Callback = function(value)
+            selectedEggs[i] = value and true or nil
         end
-        print("Selected eggs:", table.concat(selectedEggs, ", "))
+    })
+end
+
+-- Nút Mua 1 lần
+EggShopSection:AddButton({
+    Title = "Mua 1 lần",
+    Description = "Mua mỗi loại egg bạn đã chọn một lần",
+    Callback = function()
+        for i = 1, #eggTypes do
+            if selectedEggs[i] then
+                game:GetService("ReplicatedStorage").GameEvents.BuyPetEgg:FireServer(i)
+            end
+        end
     end
 })
 
-EggShopSection:AddToggle("AutoBuyEggToggle", {
-    Title = "Auto Buy Egg",
+-- Toggle tự động mua
+getgenv().AutoBuyEggs = false
+
+EggShopSection:AddToggle("AutoBuyToggle", {
+    Title = "Auto Mua",
     Default = false,
     Callback = function(value)
-        getgenv().AutoBuyEgg = value
-        print("Auto Buy Egg:", tostring(value))
-        
-        if value then
-            spawn(function()
-                while getgenv().AutoBuyEgg do
-                    if selectedEggs == nil or #selectedEggs == 0 then
-                        wait(1)
-                    else
-                        for _, eggName in pairs(selectedEggs) do
-                            local index = table.find(eggList, eggName)
-                            if index then
-                                pcall(function()
-                                    BuyPetEggEvent:FireServer(index)
-                                end)
-                                wait(0.5)
-                            end
-                        end
-                    end
-                    wait(1)
-                end
-            end)
-        end
+        getgenv().AutoBuyEggs = value
     end
 })
+
+-- Vòng lặp auto mua
+task.spawn(function()
+    while true do
+        if getgenv().AutoBuyEggs then
+            for i = 1, #eggTypes do
+                if selectedEggs[i] then
+                    game:GetService("ReplicatedStorage").GameEvents.BuyPetEgg:FireServer(i)
+                    task.wait(0.5)
+                end
+            end
+        end
+        task.wait(0.5)
+    end
+end)
 
 
 -- Tích hợp với SaveManager
