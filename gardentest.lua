@@ -477,18 +477,10 @@ end)
 -- SHOP SECTION: Mua Pet Egg
 
 
-
--- Tạo section trong Shop tab
-local EggShopSection = ShopTab:AddSection("Egg Shop")
 -- Danh sách các loại Egg
 local eggTypes = {
-    "Common Egg",      -- index 1
-    "Uncommon Egg",    -- index 2
-    "Rare Egg",        -- index 3
-    "Legendary Egg",   -- index 4
-    "Mythical Egg",    -- index 5
-    "Bug Egg",         -- index 6
-    "Night Egg"        -- index 7
+    "Common Egg", "Uncommon Egg", "Rare Egg", "Legendary Egg",
+    "Mythical Egg", "Bug Egg", "Night Egg"
 }
 
 -- Map tên -> index để gọi server
@@ -497,34 +489,35 @@ for i, name in ipairs(eggTypes) do
     eggIndexByName[name] = i
 end
 
--- Biến lưu các loại egg được chọn
-local selectedEggs = {}
+-- Load dữ liệu đã lưu
+local selectedEggs = ConfigSystem.CurrentConfig.SelectedEggs or {}
+getgenv().AutoBuyEggs = ConfigSystem.CurrentConfig.AutoBuyEggsEnabled or false
 
--- Dropdown chọn loại Egg
+-- Dropdown chọn egg
 EggShopSection:AddDropdown("EggDropdownMulti", {
     Title = "Chọn loại Egg",
     Values = eggTypes,
     Multi = true,
-    Default = {},
+    Default = selectedEggs,
     Callback = function(values)
         selectedEggs = values
-        print("Đã chọn egg: ", table.concat(values, ", "))
+        ConfigSystem.CurrentConfig.SelectedEggs = values
+        ConfigSystem.SaveConfig()
     end
 })
 
--- Toggle Auto Buy Egg
-getgenv().AutoBuyEggs = false
-
+-- Toggle Auto Mua
 EggShopSection:AddToggle("AutoBuyEggToggle", {
     Title = "Auto Mua Egg",
-    Default = false,
+    Default = getgenv().AutoBuyEggs,
     Callback = function(value)
         getgenv().AutoBuyEggs = value
-        print("Auto Buy Egg: " .. tostring(value))
+        ConfigSystem.CurrentConfig.AutoBuyEggsEnabled = value
+        ConfigSystem.SaveConfig()
     end
 })
 
--- Vòng lặp Auto Buy Egg
+-- Vòng lặp auto mua egg
 task.spawn(function()
     while true do
         if getgenv().AutoBuyEggs and selectedEggs then
@@ -541,7 +534,6 @@ task.spawn(function()
         task.wait(0.5)
     end
 end)
-
 
 -- Tích hợp với SaveManager
 SaveManager:SetLibrary(Fluent)
