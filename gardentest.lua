@@ -208,6 +208,13 @@ local PlayTab = Window:AddTab({
     Icon = "rbxassetid://7734053495" -- Bạn có thể thay icon khác nếu muốn
 })
 
+-- Tạo tab Shop
+local ShopTab = Window:MakeTab({
+    Name = "Shop",
+    Icon = "rbxassetid://7733765398",
+    PremiumOnly = false
+})
+
 
 -- Thêm hỗ trợ Logo khi minimize
 repeat task.wait(0.25) until game:IsLoaded()
@@ -468,6 +475,64 @@ task.spawn(function()
 end)
 
 -- ...existing code...
+
+-- Egg Map (Dropdown name => index)
+local eggOptions = {
+    ["Common Egg"] = 1,
+    ["Uncommon Egg"] = 2,
+    ["Rare Egg"] = 3,
+    ["Legendary Egg"] = 4,
+    ["Mythical Egg"] = 5,
+    ["Bug Egg"] = 6,
+    ["Night Egg"] = 7
+}
+
+local selectedEggs = {} -- table chứa các loại egg được chọn
+local autoBuy = false
+
+-- Auto-buy loop
+task.spawn(function()
+    while true do
+        if autoBuy then
+            for _, eggName in ipairs(selectedEggs) do
+                local eggIndex = eggOptions[eggName]
+                if eggIndex then
+                    pcall(function()
+                        local args = { eggIndex }
+                        game:GetService("ReplicatedStorage").GameEvents.BuyPetEgg:FireServer(unpack(args))
+                    end)
+                    wait(0.5) -- delay giữa các lần mua (có thể chỉnh)
+                end
+            end
+        end
+        wait(1)
+    end
+end)
+
+
+-- Section trong tab Shop
+ShopTab:AddDropdown({
+    Name = "Chọn loại Egg (nhiều)",
+    Default = {},
+    Options = { "Common Egg", "Uncommon Egg", "Rare Egg", "Legendary Egg", "Mythical Egg", "Bug Egg", "Night Egg" },
+    Multi = true,
+    Callback = function(value)
+        selectedEggs = value
+    end
+})
+
+ShopTab:AddToggle({
+    Name = "Tự động mua Egg",
+    Default = false,
+    Callback = function(value)
+        autoBuy = value
+        OrionLib:MakeNotification({
+            Name = "Auto Egg",
+            Content = value and "Đã bật tự động mua nhiều loại egg." or "Đã tắt auto mua egg.",
+            Time = 2
+        })
+    end
+})
 
 -- Tích hợp với SaveManager
 SaveManager:SetLibrary(Fluent)
