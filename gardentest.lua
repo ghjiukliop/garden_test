@@ -208,11 +208,10 @@ local PlayTab = Window:AddTab({
     Icon = "rbxassetid://7734053495" -- Bạn có thể thay icon khác nếu muốn
 })
 
--- Tạo tab Shop
-local ShopTab = Window:MakeTab({
-    Name = "Shop",
-    Icon = "rbxassetid://7733765398",
-    PremiumOnly = false
+-- Thêm tab Shop
+local ShopTab = Window:AddTab({
+    Title = "Shop",
+    Icon = "rbxassetid://7734068321" -- Bạn có thể đổi icon nếu muốn
 })
 
 
@@ -475,7 +474,10 @@ task.spawn(function()
 end)
 
 -- ...existing code...
--- Egg map
+--shop 
+local ShopSection = ShopTab:AddSection("Buy Eggs")
+
+-- Danh sách Egg
 local eggOptions = {
     ["Common Egg"] = 1,
     ["Uncommon Egg"] = 2,
@@ -486,49 +488,53 @@ local eggOptions = {
     ["Night Egg"] = 7
 }
 
+-- Lưu chọn của người dùng
 local selectedEggs = {}
-getgenv().AutoBuyEggs = false
 
--- Section trong tab Shop
-local ShopSection = ShopTab:AddSection("Auto Buy Eggs")
-
-ShopSection:AddDropdown("EggDropdown", {
-    Title = "Chọn loại Egg (có thể chọn nhiều)",
-    Values = { "Common Egg", "Uncommon Egg", "Rare Egg", "Legendary Egg", "Mythical Egg", "Bug Egg", "Night Egg" },
+-- Dropdown chọn egg
+ShopSection:AddDropdown("EggSelection", {
+    Title = "Chọn loại Egg muốn mua",
+    Values = table.keys(eggOptions),
     Multi = true,
     Default = {},
     Callback = function(values)
         selectedEggs = values
+        print("Đã chọn eggs: ", table.concat(selectedEggs, ", "))
     end
 })
+
+-- Auto Buy Toggle
+getgenv().AutoBuyEggs = false
 
 ShopSection:AddToggle("AutoBuyEggToggle", {
     Title = "Tự động mua Egg",
     Default = false,
-    Callback = function(state)
-        getgenv().AutoBuyEggs = state
-        print("Auto Buy Egg:", state)
+    Callback = function(Value)
+        getgenv().AutoBuyEggs = Value
+        print("AutoBuyEggs: " .. tostring(Value))
     end
 })
 
--- Vòng lặp tự động mua egg
+-- Luồng thực hiện Auto Buy
 task.spawn(function()
     while true do
         if getgenv().AutoBuyEggs then
             for _, eggName in ipairs(selectedEggs) do
-                local eggIndex = eggOptions[eggName]
-                if eggIndex then
-                    pcall(function()
-                        local args = { eggIndex }
-                        game:GetService("ReplicatedStorage").GameEvents.BuyPetEgg:FireServer(unpack(args))
+                local eggID = eggOptions[eggName]
+                if eggID then
+                    local success, err = pcall(function()
+                        game:GetService("ReplicatedStorage").GameEvents.BuyPetEgg:FireServer(eggID)
                     end)
-                    task.wait(0.5)
+                    if not success then
+                        warn("Lỗi khi mua egg:", err)
+                    end
                 end
             end
         end
-        task.wait(1)
+        wait(2) -- Mua mỗi 2 giây
     end
 end)
+
 
 -- Tích hợp với SaveManager
 SaveManager:SetLibrary(Fluent)
