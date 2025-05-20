@@ -480,7 +480,7 @@ end)
 
 -- Tạo section trong Shop tab
 local EggShopSection = ShopTab:AddSection("Egg Shop")
----- Danh sách các loại Egg
+-- Danh sách các loại Egg
 local eggTypes = {
     "Common Egg",      -- index 1
     "Uncommon Egg",    -- index 2
@@ -491,58 +491,49 @@ local eggTypes = {
     "Night Egg"        -- index 7
 }
 
--- Mapping index để xác định lại sau từ tên
+-- Map tên -> index để gọi server
 local eggIndexByName = {}
 for i, name in ipairs(eggTypes) do
     eggIndexByName[name] = i
 end
 
--- Danh sách egg được chọn từ dropdown
-local selectedEggNames = {}
+-- Biến lưu các loại egg được chọn
+local selectedEggs = {}
 
-EggShopSection:AddDropdown("EggDropdown", {
+-- Dropdown chọn loại Egg
+EggShopSection:AddDropdown("EggDropdownMulti", {
     Title = "Chọn loại Egg",
     Values = eggTypes,
     Multi = true,
     Default = {},
     Callback = function(values)
-        selectedEggNames = values
+        selectedEggs = values
+        print("Đã chọn egg: ", table.concat(values, ", "))
     end
 })
 
--- Nút Mua 1 lần
-EggShopSection:AddButton({
-    Title = "Mua 1 lần",
-    Description = "Mua mỗi loại egg bạn đã chọn một lần",
-    Callback = function()
-        for _, name in ipairs(selectedEggNames) do
-            local index = eggIndexByName[name]
-            if index then
-                game:GetService("ReplicatedStorage").GameEvents.BuyPetEgg:FireServer(index)
-            end
-        end
-    end
-})
-
--- Toggle tự động mua
+-- Toggle Auto Buy Egg
 getgenv().AutoBuyEggs = false
 
-EggShopSection:AddToggle("AutoBuyEggs", {
-    Title = "Auto Mua",
+EggShopSection:AddToggle("AutoBuyEggToggle", {
+    Title = "Auto Mua Egg",
     Default = false,
     Callback = function(value)
         getgenv().AutoBuyEggs = value
+        print("Auto Buy Egg: " .. tostring(value))
     end
 })
 
--- Vòng lặp tự động mua egg
+-- Vòng lặp Auto Buy Egg
 task.spawn(function()
     while true do
-        if getgenv().AutoBuyEggs then
-            for _, name in ipairs(selectedEggNames) do
+        if getgenv().AutoBuyEggs and selectedEggs then
+            for _, name in ipairs(selectedEggs) do
                 local index = eggIndexByName[name]
                 if index then
-                    game:GetService("ReplicatedStorage").GameEvents.BuyPetEgg:FireServer(index)
+                    pcall(function()
+                        game:GetService("ReplicatedStorage").GameEvents.BuyPetEgg:FireServer(index)
+                    end)
                     task.wait(0.5)
                 end
             end
