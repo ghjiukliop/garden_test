@@ -208,6 +208,13 @@ local PlayTab = Window:AddTab({
     Icon = "rbxassetid://7734053495" -- Bạn có thể thay icon khác nếu muốn
 })
 
+function table.keys(tbl)
+    local result = {}
+    for k, _ in pairs(tbl) do
+        table.insert(result, k)
+    end
+    return result
+end
 -- Thêm tab Shop
 local ShopTab = Window:AddTab({
     Title = "Shop",
@@ -475,6 +482,66 @@ end)
 
 -- ...existing code...
 --shop 
+
+local ShopSection = ShopTab:AddSection("Buy Eggs")
+
+-- Danh sách Egg
+local eggOptions = {
+    ["Common Egg"] = 1,
+    ["Uncommon Egg"] = 2,
+    ["Rare Egg"] = 3,
+    ["Legendary Egg"] = 4,
+    ["Mythical Egg"] = 5,
+    ["Bug Egg"] = 6,
+    ["Night Egg"] = 7
+}
+
+-- Lưu chọn của người dùng
+local selectedEggs = {}
+
+-- Dropdown chọn egg
+ShopSection:AddDropdown("EggSelection", {
+    Title = "Chọn loại Egg muốn mua",
+    Values = table.keys(eggOptions),
+    Multi = true,
+    Default = {},
+    Callback = function(values)
+        selectedEggs = values
+        print("Đã chọn eggs: ", table.concat(selectedEggs, ", "))
+    end
+})
+
+-- Auto Buy Toggle
+getgenv().AutoBuyEggs = false
+
+ShopSection:AddToggle("AutoBuyEggToggle", {
+    Title = "Tự động mua Egg",
+    Default = false,
+    Callback = function(Value)
+        getgenv().AutoBuyEggs = Value
+        print("AutoBuyEggs: " .. tostring(Value))
+    end
+})
+
+-- Luồng thực hiện Auto Buy
+task.spawn(function()
+    while true do
+        if getgenv().AutoBuyEggs then
+            for _, eggName in ipairs(selectedEggs) do
+                local eggID = eggOptions[eggName]
+                if eggID then
+                    local success, err = pcall(function()
+                        game:GetService("ReplicatedStorage").GameEvents.BuyPetEgg:FireServer(eggID)
+                    end)
+                    if not success then
+                        warn("Lỗi khi mua egg:", err)
+                    end
+                end
+            end
+        end
+        wait(2)
+    end
+end)
 
 -- Tích hợp với SaveManager
 SaveManager:SetLibrary(Fluent)
