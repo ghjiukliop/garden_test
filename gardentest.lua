@@ -482,11 +482,11 @@ end)
 
 -- ...existing code...
 --shop 
+-- SHOP SECTION: Mua Pet Egg
+local ShopSection = ShopTab:AddSection("Mua Pet Egg")
 
-local ShopSection = ShopTab:AddSection("Buy Eggs")
-
--- Danh sách Egg
-local eggOptions = {
+-- Danh sách loại Egg và ID tương ứng
+local eggTypes = {
     ["Common Egg"] = 1,
     ["Uncommon Egg"] = 2,
     ["Rare Egg"] = 3,
@@ -496,52 +496,68 @@ local eggOptions = {
     ["Night Egg"] = 7
 }
 
--- Lưu chọn của người dùng
-local selectedEggs = {}
-
--- Dropdown chọn egg
-ShopSection:AddDropdown("EggSelection", {
-    Title = "Chọn loại Egg muốn mua",
-    Values = table.keys(eggOptions),
-    Multi = true,
-    Default = {},
-    Callback = function(values)
-        selectedEggs = values
-        print("Đã chọn eggs: ", table.concat(selectedEggs, ", "))
-    end
-})
-
--- Auto Buy Toggle
+-- Biến lưu lựa chọn
+getgenv().SelectedEggs = {}
 getgenv().AutoBuyEggs = false
 
-ShopSection:AddToggle("AutoBuyEggToggle", {
-    Title = "Tự động mua Egg",
-    Default = false,
-    Callback = function(Value)
-        getgenv().AutoBuyEggs = Value
-        print("AutoBuyEggs: " .. tostring(Value))
+-- Dropdown chọn nhiều loại Egg
+ShopSection:AddDropdown("EggDropdown", {
+    Title = "Chọn loại Egg muốn mua",
+    Values = table.keys(eggTypes),
+    Multi = true,
+    Default = {},
+    Callback = function(selected)
+        getgenv().SelectedEggs = selected
+        print("Đã chọn Egg:", table.concat(selected, ", "))
     end
 })
 
--- Luồng thực hiện Auto Buy
+-- Nút mua tất cả egg đã chọn
+ShopSection:AddButton({
+    Title = "Mua tất cả Egg đã chọn",
+    Callback = function()
+        for _, eggName in ipairs(getgenv().SelectedEggs) do
+            local eggId = eggTypes[eggName]
+            if eggId then
+                local args = { [1] = eggId }
+                game:GetService("ReplicatedStorage").GameEvents.BuyPetEgg:FireServer(unpack(args))
+                print("Đã mua:", eggName)
+                task.wait(0.3) -- Đợi nhẹ để tránh spam quá nhanh
+            end
+        end
+    end
+})
+
+-- Toggle auto mua egg
+ShopSection:AddToggle("AutoBuyEggsToggle", {
+    Title = "Auto mua Egg",
+    Default = false,
+    Callback = function(state)
+        getgenv().AutoBuyEggs = state
+        print("Auto Buy Egg:", state)
+    end
+})
+
+-- Luồng auto mua egg liên tục
 task.spawn(function()
     while true do
         if getgenv().AutoBuyEggs then
-            for _, eggName in ipairs(selectedEggs) do
-                local eggID = eggOptions[eggName]
-                if eggID then
-                    local success, err = pcall(function()
-                        game:GetService("ReplicatedStorage").GameEvents.BuyPetEgg:FireServer(eggID)
+            for _, eggName in ipairs(getgenv().SelectedEggs) do
+                local eggId = eggTypes[eggName]
+                if eggId then
+                    local args = { [1] = eggId }
+                    pcall(function()
+                        game:GetService("ReplicatedStorage").GameEvents.BuyPetEgg:FireServer(unpack(args))
+                        print("Auto mua:", eggName)
                     end)
-                    if not success then
-                        warn("Lỗi khi mua egg:", err)
-                    end
+                    task.wait(0.5) -- Delay tránh overload server
                 end
             end
         end
-        wait(2)
+        task.wait(1)
     end
 end)
+
 
 -- Tích hợp với SaveManager
 SaveManager:SetLibrary(Fluent)
