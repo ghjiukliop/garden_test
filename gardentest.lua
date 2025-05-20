@@ -475,8 +475,7 @@ task.spawn(function()
 end)
 
 -- ...existing code...
-
--- Egg Map (Dropdown name => index)
+-- Egg map
 local eggOptions = {
     ["Common Egg"] = 1,
     ["Uncommon Egg"] = 2,
@@ -487,13 +486,35 @@ local eggOptions = {
     ["Night Egg"] = 7
 }
 
-local selectedEggs = {} -- table chứa các loại egg được chọn
-local autoBuy = false
+local selectedEggs = {}
+getgenv().AutoBuyEggs = false
 
--- Auto-buy loop
+-- Section trong tab Shop
+local ShopSection = ShopTab:AddSection("Auto Buy Eggs")
+
+ShopSection:AddDropdown("EggDropdown", {
+    Title = "Chọn loại Egg (có thể chọn nhiều)",
+    Values = { "Common Egg", "Uncommon Egg", "Rare Egg", "Legendary Egg", "Mythical Egg", "Bug Egg", "Night Egg" },
+    Multi = true,
+    Default = {},
+    Callback = function(values)
+        selectedEggs = values
+    end
+})
+
+ShopSection:AddToggle("AutoBuyEggToggle", {
+    Title = "Tự động mua Egg",
+    Default = false,
+    Callback = function(state)
+        getgenv().AutoBuyEggs = state
+        print("Auto Buy Egg:", state)
+    end
+})
+
+-- Vòng lặp tự động mua egg
 task.spawn(function()
     while true do
-        if autoBuy then
+        if getgenv().AutoBuyEggs then
             for _, eggName in ipairs(selectedEggs) do
                 local eggIndex = eggOptions[eggName]
                 if eggIndex then
@@ -501,38 +522,13 @@ task.spawn(function()
                         local args = { eggIndex }
                         game:GetService("ReplicatedStorage").GameEvents.BuyPetEgg:FireServer(unpack(args))
                     end)
-                    wait(0.5) -- delay giữa các lần mua (có thể chỉnh)
+                    task.wait(0.5)
                 end
             end
         end
-        wait(1)
+        task.wait(1)
     end
 end)
-
-
--- Section trong tab Shop
-ShopTab:AddDropdown({
-    Name = "Chọn loại Egg (nhiều)",
-    Default = {},
-    Options = { "Common Egg", "Uncommon Egg", "Rare Egg", "Legendary Egg", "Mythical Egg", "Bug Egg", "Night Egg" },
-    Multi = true,
-    Callback = function(value)
-        selectedEggs = value
-    end
-})
-
-ShopTab:AddToggle({
-    Name = "Tự động mua Egg",
-    Default = false,
-    Callback = function(value)
-        autoBuy = value
-        OrionLib:MakeNotification({
-            Name = "Auto Egg",
-            Content = value and "Đã bật tự động mua nhiều loại egg." or "Đã tắt auto mua egg.",
-            Time = 2
-        })
-    end
-})
 
 -- Tích hợp với SaveManager
 SaveManager:SetLibrary(Fluent)
