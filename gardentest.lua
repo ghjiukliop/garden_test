@@ -476,6 +476,11 @@ end)
 --shop 
 -- SHOP SECTION: Mua Pet Egg
 
+
+
+-- Tạo section trong Shop tab
+local EggShopSection = ShopTab:AddSection("Egg Shop")
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BuyPetEggEvent = ReplicatedStorage.GameEvents:WaitForChild("BuyPetEgg")
 
@@ -490,9 +495,6 @@ local eggList = {
 }
 
 local selectedEggs = {}
-
--- Tạo section trong Shop tab
-local EggShopSection = ShopTab:AddSection("Egg Shop")
 
 -- Tạo dropdown chọn nhiều egg
 EggShopSection:AddDropdown("SelectEggs", {
