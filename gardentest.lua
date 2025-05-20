@@ -559,6 +559,23 @@ task.spawn(function()
 end)
 
 
+
+-- Dropdown chọn theme
+SettingsSection:AddDropdown("ThemeDropdown", {
+    Title = "Chọn Theme",
+    Values = {"Dark", "Light", "Darker", "Aqua", "Amethyst"},
+    Multi = false,
+    Default = ConfigSystem.CurrentConfig.UITheme or "Dark",
+    Callback = function(Value)
+        -- Gán vào bản sao để tránh readonly
+        local newConfig = table.clone(ConfigSystem.CurrentConfig)
+        newConfig.UITheme = Value
+        ConfigSystem.CurrentConfig = newConfig
+        ConfigSystem.SaveConfig()
+        print("Đã chọn theme: " .. Value)
+    end
+})
+
 -- Tích hợp với SaveManager
 SaveManager:SetLibrary(Fluent)
 InterfaceManager:SetLibrary(Fluent)
