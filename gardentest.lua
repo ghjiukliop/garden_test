@@ -331,8 +331,9 @@ end
 -- Auto Farm Fruit - Giao diện Fluent thay cho GUI cũ (giữ nguyên chức năng) + Sửa thu thập + Bật tìm kiếm rõ ràng
 -- Section Auto Farm Fruit trong tab Play
 local AutoFarmSection = PlayTab:AddSection("Auto Farm Fruit")
+print("Đã tạo section Auto Farm Fruit trong tab Play")
 
--- Danh sách tên cây cố định (giữ nguyên từ script của bạn)
+-- Danh sách tên cây cố định
 local allPlantNames = {
     "Apple", "Avocado", "Banana", "Beanstalk", "Blood Banana", "Blueberry", "Cacao", "Cactus", "Candy Blossom",
     "Celestiberry", "Cherry Blossom", "Cherry OLD", "Coconut", "Corn", "Cranberry", "Crimson Vine", "Cursed Fruit",
@@ -347,26 +348,40 @@ local allPlantNames = {
 local selectedPlantNames = ConfigSystem.CurrentConfig.SelectedPlants or {}
 local collecting = ConfigSystem.CurrentConfig.AutoFarmEnabled or false
 local playerFarm
+local plantObjects
 
 -- Tìm farm của người chơi
 local farms = safeGetPath(workspace, {"Farm"}, 1)
 if farms then
+    print("Đã tìm thấy thư mục Farm trong workspace")
     for _, farm in ipairs(farms:GetChildren()) do
         local owner = safeGetPath(farm, {"Important", "Data", "Owner"}, 0.5)
         if owner and owner.Value == playerName then
             playerFarm = farm
+            print("Đã tìm thấy farm của người chơi: " .. playerName)
             break
         end
     end
+else
+    warn("❌ Không tìm thấy thư mục Farm trong workspace")
 end
 
 if not playerFarm then
     warn("❌ Không tìm thấy farm của người chơi.")
+    AutoFarmSection:AddParagraph({
+        Title = "Lỗi",
+        Content = "Không tìm thấy farm của bạn. Vui lòng đảm bảo bạn đang ở trong farm của mình."
+    })
 else
-    local plantObjects = safeGetPath(playerFarm, {"Important", "Plants_Physical"}, 0.5)
+    plantObjects = safeGetPath(playerFarm, {"Important", "Plants_Physical"}, 0.5)
     if not plantObjects then
         warn("❌ Không tìm thấy Plants_Physical.")
+        AutoFarmSection:AddParagraph({
+            Title = "Lỗi",
+            Content = "Không tìm thấy dữ liệu cây trồng. Vui lòng kiểm tra farm của bạn."
+        })
     else
+        print("Đã tìm thấy Plants_Physical, khởi tạo UI Auto Farm")
         -- Dropdown chọn cây
         AutoFarmSection:AddDropdown("PlantDropdown", {
             Title = "Chọn loại cây",
@@ -382,13 +397,12 @@ else
             end
         })
 
-        -- Ô tìm kiếm (TextInput thay cho TextBox)
+        -- Ô tìm kiếm
         AutoFarmSection:AddInput("PlantSearch", {
             Title = "Tìm kiếm cây",
             Placeholder = "🔍 Nhập tên cây...",
             Callback = function(keyword)
-                -- Lọc danh sách cây trong Dropdown
-                local dropdown = AutoFarmSection._components.PlantDropdown
+                local dropdown = AutoFarmSection._components and AutoFarmSection._components.PlantDropdown
                 if dropdown then
                     local filtered = {}
                     for _, name in ipairs(allPlantNames) do
@@ -397,6 +411,9 @@ else
                         end
                     end
                     dropdown:SetValues(filtered)
+                    print("Lọc cây với từ khóa: " .. keyword)
+                else
+                    warn("Không tìm thấy PlantDropdown để lọc")
                 end
             end
         })
@@ -414,13 +431,21 @@ else
             end
         })
 
-        -- Hàm thu thập trái cây (giữ nguyên từ script của bạn)
+        -- Hàm thu thập trái cây
         local function collectFruit(fruit)
             if not fruit:IsA("Model") then return end
             local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
-            if prompt then fireproximityprompt(prompt) return end
+            if prompt then 
+                fireproximityprompt(prompt) 
+                print("Thu thập qua ProximityPrompt: " .. fruit.Name)
+                return 
+            end
             local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
-            if click then fireclickdetector(click) return end
+            if click then 
+                fireclickdetector(click) 
+                print("Thu thập qua ClickDetector: " .. fruit.Name)
+                return 
+            end
         end
 
         -- Vòng lặp tự động thu thập
