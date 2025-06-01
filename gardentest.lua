@@ -202,11 +202,7 @@ local InfoTab = Window:AddTab({
     Icon = "rbxassetid://7733964719"
 })
 
--- Thêm tab Play
-local PlayTab = Window:AddTab({
-    Title = "Play",
-    Icon = "rbxassetid://7734053495" -- Bạn có thể thay icon khác nếu muốn
-})
+
 -- Thêm tab Shop
 local ShopTab = Window:AddTab({
     Title = "Shop",
@@ -332,11 +328,15 @@ end
 
 -- ...existing code...
 
--- Thêm section vào tab Play
--- Tích hợp với Fluent UI của script chính (HT Hub)
--- Chèn vào sau khi đã tạo Fluent và các Tab trong script chính
+-- Thêm tab Play
+local PlayTab = Window:AddTab({
+    Title = "Play",
+    Icon = "rbxassetid://7734053495" -- Bạn có thể thay icon khác nếu muốn
+})
+
 
 local FluentSection = PlayTab:AddSection("Auto Thu Hoạch")
+print("✅ FluentSection đã tạo")  -- Kiểm tra có chạy không
 
 -- Danh sách tên cây cố định
 local allPlantNames = {
