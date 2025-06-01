@@ -335,6 +335,7 @@ end
 -- Thêm section vào tab Play
 -- Dropdown + Multi-Select + Auto Farm Fruits (dò cây đã chọn trong kho tất cả cây và farm trong farm người chơi) + Lưu lựa chọn
 -- Auto Farm Fruit - Giao diện Fluent thay cho GUI cũ (giữ nguyên chức năng)
+-- Auto Farm Fruit - Giao diện Fluent thay cho GUI cũ (giữ nguyên chức năng) + Fix tìm kiếm và thu thập
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -402,10 +403,22 @@ PlaySection:AddToggle("FluentAutoFarmToggle", {
 -- Hàm thu thập fruit
 local function collectFruit(fruit)
     if not fruit:IsA("Model") then return end
+
     local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
-    if prompt then fireproximityprompt(prompt) return end
+    if prompt and prompt:IsDescendantOf(fruit) and prompt.Enabled then
+        fireproximityprompt(prompt)
+        print("🟢 Thu thập bằng ProximityPrompt:", fruit.Name)
+        return
+    end
+
     local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
-    if click then fireclickdetector(click) return end
+    if click and click:IsDescendantOf(fruit) then
+        fireclickdetector(click)
+        print("🔵 Thu thập bằng ClickDetector:", fruit.Name)
+        return
+    end
+
+    print("⚠️ Không thể thu thập:", fruit.Name)
 end
 
 -- Auto loop
@@ -417,14 +430,13 @@ RunService.Heartbeat:Connect(function()
                 if fruits then
                     for _, fruit in ipairs(fruits:GetChildren()) do
                         collectFruit(fruit)
-                        task.wait(0.05)
+                        task.wait(0.1)
                     end
                 end
             end
         end
     end
 end)
-
 --end
 --shop 
 -- SHOP SECTION: Mua Pet Egg
