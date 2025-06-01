@@ -202,7 +202,11 @@ local InfoTab = Window:AddTab({
     Icon = "rbxassetid://7733964719"
 })
 
-
+-- Thêm tab Play
+local PlayTab = Window:AddTab({
+    Title = "Play",
+    Icon = "rbxassetid://7734053495" -- Bạn có thể thay icon khác nếu muốn
+})
 -- Thêm tab Shop
 local ShopTab = Window:AddTab({
     Title = "Shop",
@@ -328,107 +332,6 @@ end
 
 -- ...existing code...
 
--- Thêm tab Play
-local PlayTab = Window:AddTab({
-    Title = "Play",
-    Icon = "rbxassetid://7734053495" -- Bạn có thể thay icon khác nếu muốn
-})
-
-
-local FluentSection = PlayTab:AddSection("Auto Thu Hoạch")
-print("✅ FluentSection đã tạo")  -- Kiểm tra có chạy không
-
--- Danh sách tên cây cố định
-local allPlantNames = {
-    "Apple", "Avocado", "Banana", "Beanstalk", "Blood Banana", "Blueberry", "Cacao", "Cactus", "Candy Blossom",
-    "Celestiberry", "Cherry Blossom", "Cherry OLD", "Coconut", "Corn", "Cranberry", "Crimson Vine", "Cursed Fruit",
-    "Dragon Fruit", "Durian", "Easter Egg", "Eggplant", "Ember Lily", "Foxglove", "Glowshroom", "Grape", "Hive Fruit",
-    "Lemon", "Lilac", "Lotus", "Mango", "Mint", "Moon Blossom", "Moon Mango", "Moon Melon", "Moonflower", "Moonglow",
-    "Nectarine", "Papaya", "Passionfruit", "Peach", "Pear", "Pepper", "Pineapple", "Pink Lily", "Purple Cabbage",
-    "Purple Dahlia", "Raspberry", "Rose", "Soul Fruit", "Starfruit", "Strawberry", "Succulent", "Sunflower",
-    "Tomato", "Venus Fly Trap"
-}
-
-local selectedPlantNames = {}
-local collecting = false
-
--- Tìm farm người chơi
-local playerFarm
-local farms = workspace:FindFirstChild("Farm")
-if farms then
-    for _, farm in ipairs(farms:GetChildren()) do
-        local owner = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data") and farm.Important.Data:FindFirstChild("Owner")
-        if owner and owner.Value == player.Name then
-            playerFarm = farm
-            break
-        end
-    end
-end
-
-if not playerFarm then
-    warn("❌ Không tìm thấy farm của người chơi.")
-    return
-end
-
-local plantObjects = playerFarm.Important:FindFirstChild("Plants_Physical")
-if not plantObjects then
-    warn("❌ Không tìm thấy Plants_Physical.")
-    return
-end
-
--- Dropdown chọn cây
-FluentSection:AddDropdown("PlantDropdown", {
-    Title = "Chọn cây cần thu hoạch",
-    Values = allPlantNames,
-    Multi = true,
-    Default = {},
-    Callback = function(values)
-        selectedPlantNames = values
-        print("Đã chọn cây: " .. table.concat(values, ", "))
-    end
-})
-
--- Nút bật tắt Auto thu hoạch
-FluentSection:AddToggle("AutoCollectFruits", {
-    Title = "Auto thu hoạch",
-    Default = false,
-    Callback = function(state)
-        collecting = state
-    end
-})
-
--- Hàm thu thập quả
-local function collectFruit(fruit)
-    if not fruit:IsA("Model") then return end
-    local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
-    if prompt then fireproximityprompt(prompt) return end
-    local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
-    if click then fireclickdetector(click) return end
-end
-
--- Tự động thu thập
-task.spawn(function()
-    while true do
-        if collecting and #selectedPlantNames > 0 then
-            for _, plant in ipairs(plantObjects:GetChildren()) do
-                if table.find(selectedPlantNames, plant.Name) then
-                    local fruits = plant:FindFirstChild("Fruits")
-                    if fruits then
-                        for _, fruit in ipairs(fruits:GetChildren()) do
-                            collectFruit(fruit)
-                            task.wait(0.05)
-                        end
-                    end
-                end
-            end
-        end
-        task.wait(0.1)
-    end
-end)
-
-
---// Dịch vụ
---end
 --shop 
 -- SHOP SECTION: Mua Pet Egg
 
