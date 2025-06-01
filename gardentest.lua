@@ -187,7 +187,7 @@ local playerName = game:GetService("Players").LocalPlayer.Name
 
 -- Tạo Window
 local Window = Fluent:CreateWindow({
-    Title = "HT Hub | Anime Saga",
+    Title = "HT Hub | Grow a Garden",
     SubTitle = "",
     TabWidth = 140,
     Size = UDim2.fromOffset(450, 350),
@@ -272,7 +272,7 @@ Window:SelectTab(1) -- Chọn tab đầu tiên (Info)
 local InfoSection = InfoTab:AddSection("Thông tin")
 
 InfoSection:AddParagraph({
-    Title = "Anime Saga",
+    Title = "Grow a Garden",
     Content = "Phiên bản: 1.0 Beta\nTrạng thái: Hoạt động"
 })
 
@@ -332,9 +332,103 @@ end
 
 -- ...existing code...
 
+-- Thêm section vào tab Play
 
 
--- ...existing code...
+--// Dịch vụ
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+
+-- Danh sách cây cố định từ game
+local allPlantNames = {
+    "Apple", "Avocado", "Banana", "Beanstalk", "Blood Banana", "Blueberry", "Cacao", "Cactus", "Candy Blossom",
+    "Celestiberry", "Cherry Blossom", "Cherry OLD", "Coconut", "Corn", "Cranberry", "Crimson Vine", "Cursed Fruit",
+    "Dragon Fruit", "Durian", "Easter Egg", "Eggplant", "Ember Lily", "Foxglove", "Glowshroom", "Grape", "Hive Fruit",
+    "Lemon", "Lilac", "Lotus", "Mango", "Mint", "Moon Blossom", "Moon Mango", "Moon Melon", "Moonflower", "Moonglow",
+    "Nectarine", "Papaya", "Passionfruit", "Peach", "Pear", "Pepper", "Pineapple", "Pink Lily", "Purple Cabbage",
+    "Purple Dahlia", "Raspberry", "Rose", "Soul Fruit", "Starfruit", "Strawberry", "Succulent", "Sunflower",
+    "Tomato", "Venus Fly Trap"
+}
+
+local selectedPlantNames = ConfigSystem.CurrentConfig.FluentSelectedFruits or {}
+local collecting = ConfigSystem.CurrentConfig.FluentAutoFarm or false
+
+-- Tìm farm người chơi
+local playerFarm
+local farms = workspace:FindFirstChild("Farm")
+if farms then
+    for _, farm in ipairs(farms:GetChildren()) do
+        local owner = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data") and farm.Important.Data:FindFirstChild("Owner")
+        if owner and owner.Value == LocalPlayer.Name then
+            playerFarm = farm
+            break
+        end
+    end
+end
+
+if not playerFarm then warn("❌ Không tìm thấy farm của người chơi.") return end
+local plantObjects = playerFarm.Important:FindFirstChild("Plants_Physical")
+if not plantObjects then warn("❌ Không tìm thấy Plants_Physical.") return end
+
+-- Giao diện Fluent UI trong Tab "Play"
+local PlaySection = PlayTab:AddSection(" Collector")
+
+PlaySection:AddToggle("AutoFarmToggle", {
+    Title = "Auto Farm cây đã chọn",
+    Default = collecting,
+    Callback = function(state)
+        collecting = state
+        ConfigSystem.CurrentConfig.FluentAutoFarm = state
+        ConfigSystem.SaveConfig()
+        print("🔁 Auto Farm:", state)
+    end
+})
+
+PlaySection:AddDropdown("FruitTypeDropdown", {
+    Title = "Chọn cây muốn thu thập",
+    Values = allPlantNames,
+    Multi = true,
+    Search = true, -- Kích hoạt thanh tìm kiếm
+    Default = selectedPlantNames,
+    Callback = function(values)
+        selectedPlantNames = values
+        ConfigSystem.CurrentConfig.FluentSelectedFruits = values
+        ConfigSystem.SaveConfig()
+        print("🌱 Cây đã chọn:", table.concat(values, ", "))
+    end
+})
+
+-- Hàm thu thập
+local function collectFruit(fruit)
+    if not fruit:IsA("Model") then return end
+    local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
+    if prompt and prompt.Enabled then fireproximityprompt(prompt) return end
+    local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
+    if click then fireclickdetector(click) return end
+end
+
+-- Vòng lặp tự động thu thập
+task.spawn(function()
+    while true do
+        if collecting and #selectedPlantNames > 0 then
+            for _, plant in ipairs(plantObjects:GetChildren()) do
+                if table.find(selectedPlantNames, plant.Name) then
+                    local fruits = plant:FindFirstChild("Fruits")
+                    if fruits then
+                        for _, fruit in ipairs(fruits:GetChildren()) do
+                            collectFruit(fruit)
+                            task.wait(0.05)
+                        end
+                    end
+                end
+            end
+        end
+        task.wait(0.1)
+    end
+end)
+
+--end
 --shop 
 -- SHOP SECTION: Mua Pet Egg
 
