@@ -83,18 +83,13 @@ local function safeGetPath(startPoint, path, waitTime)
     return current
 end
 
--- Hệ thống lưu trữ cấu hình
-local ConfigSystem = {}
-ConfigSystem.FileName = "AnimeSagaConfig_" .. game:GetService("Players").LocalPlayer.Name .. ".json"
 ConfigSystem.DefaultConfig = {
     -- Các cài đặt mặc định
     UITheme = "Amethyst",
-    
-    -- Cài đặt log
     LogsEnabled = true,
     WarningsEnabled = true,
-    
-    -- Các cài đặt khác sẽ được thêm vào sau
+    SelectedPlants = {}, -- Danh sách cây đã chọn
+    AutoFarmEnabled = false -- Trạng thái auto farm
 }
 ConfigSystem.CurrentConfig = {}
 
@@ -334,6 +329,121 @@ end
 
 -- Thêm section vào tab Play
 -- Auto Farm Fruit - Giao diện Fluent thay cho GUI cũ (giữ nguyên chức năng) + Sửa thu thập + Bật tìm kiếm rõ ràng
+-- Section Auto Farm Fruit trong tab Play
+local AutoFarmSection = PlayTab:AddSection("Auto Farm Fruit")
+
+-- Danh sách tên cây cố định (giữ nguyên từ script của bạn)
+local allPlantNames = {
+    "Apple", "Avocado", "Banana", "Beanstalk", "Blood Banana", "Blueberry", "Cacao", "Cactus", "Candy Blossom",
+    "Celestiberry", "Cherry Blossom", "Cherry OLD", "Coconut", "Corn", "Cranberry", "Crimson Vine", "Cursed Fruit",
+    "Dragon Fruit", "Durian", "Easter Egg", "Eggplant", "Ember Lily", "Foxglove", "Glowshroom", "Grape", "Hive Fruit",
+    "Lemon", "Lilac", "Lotus", "Mango", "Mint", "Moon Blossom", "Moon Mango", "Moon Melon", "Moonflower", "Moonglow",
+    "Nectarine", "Papaya", "Passionfruit", "Peach", "Pear", "Pepper", "Pineapple", "Pink Lily", "Purple Cabbage",
+    "Purple Dahlia", "Raspberry", "Rose", "Soul Fruit", "Starfruit", "Strawberry", "Succulent", "Sunflower",
+    "Tomato", "Venus Fly Trap"
+}
+
+-- Khởi tạo biến
+local selectedPlantNames = ConfigSystem.CurrentConfig.SelectedPlants or {}
+local collecting = ConfigSystem.CurrentConfig.AutoFarmEnabled or false
+local playerFarm
+
+-- Tìm farm của người chơi
+local farms = safeGetPath(workspace, {"Farm"}, 1)
+if farms then
+    for _, farm in ipairs(farms:GetChildren()) do
+        local owner = safeGetPath(farm, {"Important", "Data", "Owner"}, 0.5)
+        if owner and owner.Value == playerName then
+            playerFarm = farm
+            break
+        end
+    end
+end
+
+if not playerFarm then
+    warn("❌ Không tìm thấy farm của người chơi.")
+else
+    local plantObjects = safeGetPath(playerFarm, {"Important", "Plants_Physical"}, 0.5)
+    if not plantObjects then
+        warn("❌ Không tìm thấy Plants_Physical.")
+    else
+        -- Dropdown chọn cây
+        AutoFarmSection:AddDropdown("PlantDropdown", {
+            Title = "Chọn loại cây",
+            Description = "Chọn các loại cây để tự động thu thập",
+            Values = allPlantNames,
+            Multi = true,
+            Default = selectedPlantNames,
+            Callback = function(values)
+                selectedPlantNames = values
+                ConfigSystem.CurrentConfig.SelectedPlants = values
+                ConfigSystem.SaveConfig()
+                print("Đã chọn các cây: " .. table.concat(values, ", "))
+            end
+        })
+
+        -- Ô tìm kiếm (TextInput thay cho TextBox)
+        AutoFarmSection:AddInput("PlantSearch", {
+            Title = "Tìm kiếm cây",
+            Placeholder = "🔍 Nhập tên cây...",
+            Callback = function(keyword)
+                -- Lọc danh sách cây trong Dropdown
+                local dropdown = AutoFarmSection._components.PlantDropdown
+                if dropdown then
+                    local filtered = {}
+                    for _, name in ipairs(allPlantNames) do
+                        if keyword == "" or name:lower():find(keyword:lower()) then
+                            table.insert(filtered, name)
+                        end
+                    end
+                    dropdown:SetValues(filtered)
+                end
+            end
+        })
+
+        -- Toggle Auto Farm
+        AutoFarmSection:AddToggle("AutoFarmToggle", {
+            Title = "Tự động thu thập",
+            Description = "Bật/tắt tự động thu thập trái cây",
+            Default = collecting,
+            Callback = function(value)
+                collecting = value
+                ConfigSystem.CurrentConfig.AutoFarmEnabled = value
+                ConfigSystem.SaveConfig()
+                print("Tự động thu thập: " .. (value and "Bật" or "Tắt"))
+            end
+        })
+
+        -- Hàm thu thập trái cây (giữ nguyên từ script của bạn)
+        local function collectFruit(fruit)
+            if not fruit:IsA("Model") then return end
+            local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
+            if prompt then fireproximityprompt(prompt) return end
+            local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
+            if click then fireclickdetector(click) return end
+        end
+
+        -- Vòng lặp tự động thu thập
+        task.spawn(function()
+            while true do
+                if collecting and #selectedPlantNames > 0 and plantObjects then
+                    for _, plant in ipairs(plantObjects:GetChildren()) do
+                        if table.find(selectedPlantNames, plant.Name) then
+                            local fruits = plant:FindFirstChild("Fruits")
+                            if fruits then
+                                for _, fruit in ipairs(fruits:GetChildren()) do
+                                    collectFruit(fruit)
+                                    task.wait(0.05)
+                                end
+                            end
+                        end
+                    end
+                end
+                task.wait(0.1)
+            end
+        end)
+    end
+end
 --end
 --shop 
 -- SHOP SECTION: Mua Pet Egg
