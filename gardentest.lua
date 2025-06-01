@@ -335,6 +335,7 @@ end
 -- Thêm section vào tab Play
 -- Auto Farm Fruit - Giao diện Fluent thay cho GUI cũ (giữ nguyên chức năng) + Sửa thu thập + Bật tìm kiếm rõ ràng
 -- Auto Farm Fruit - Dùng cách thu thập fruit từ script gốc (Prompt / ClickDetector)
+-- Auto Farm Fruit - Đã vá lỗi không thu thập do Prompt/ClickDetector nằm sâu trong model
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -399,21 +400,23 @@ PlaySection:AddDropdown("FruitTypeDropdown", {
     end
 })
 
--- Hàm thu thập sử dụng Prompt / ClickDetector
+-- Hàm thu thập: tìm toàn bộ Prompt/ClickDetector trong toàn bộ descendants
 local function collectFruit(fruit)
     if not fruit:IsA("Model") then return end
-    local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
-    if prompt and prompt.Enabled then
-        fireproximityprompt(prompt)
-        print("🟢 Thu thập bằng Prompt:", fruit.Name)
-        return
+
+    for _, obj in ipairs(fruit:GetDescendants()) do
+        if obj:IsA("ProximityPrompt") and obj.Enabled then
+            fireproximityprompt(obj)
+            print("🟢 Prompt:", fruit.Name)
+            return
+        elseif obj:IsA("ClickDetector") then
+            fireclickdetector(obj)
+            print("🔵 Click:", fruit.Name)
+            return
+        end
     end
-    local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
-    if click then
-        fireclickdetector(click)
-        print("🔵 Thu thập bằng ClickDetector:", fruit.Name)
-        return
-    end
+
+    print("⚠️ Không thấy Prompt/ClickDetector:", fruit.Name)
 end
 
 -- Tự động thu thập fruit
@@ -423,15 +426,17 @@ RunService.Heartbeat:Connect(function()
             if table.find(selectedPlantNames, plant.Name) then
                 local fruits = plant:FindFirstChild("Fruits")
                 if fruits then
+                    print("📦 Cây", plant.Name, "có", #fruits:GetChildren(), "fruit")
                     for _, fruit in ipairs(fruits:GetChildren()) do
                         collectFruit(fruit)
-                        task.wait(0.05)
+                        task.wait(0.1)
                     end
                 end
             end
         end
-    end 
+    end
 end)
+
 
 
 --end
