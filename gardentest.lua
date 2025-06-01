@@ -346,16 +346,15 @@ local allPlantNames = {
     "Tomato", "Venus Fly Trap"
 }
 
--- Biến cài đặt
+-- Biến cài đặt-- Auto Fruit Collection Section (Sửa)
 local selectedPlantNames = {}
 getgenv().AutoCollectFruits = false
 
--- Tìm farm của người chơi
 local farms = workspace:FindFirstChild("Farm")
 local playerFarm
 if farms then
 	for _, farm in ipairs(farms:GetChildren()) do
-		local owner = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data") and farm.Important.Data:FindFirstChild("Owner")
+		local owner = safeGetPath(farm, {"Important", "Data", "Owner"})
 		if owner and owner.Value == player.Name then
 			playerFarm = farm
 			break
@@ -363,8 +362,11 @@ if farms then
 	end
 end
 
--- Bắt đầu UI trong tab Play
-local CollectSection = PlayTab:AddSection("Tự động thu hoạch")
+if not playerFarm then
+	warn("❌ Không tìm thấy farm của người chơi.")
+end
+
+local CollectSection = PlayTab:AddSection("Tự động thu hoạch2")
 
 CollectSection:AddDropdown("PlantDropdown", {
     Title = "Chọn cây muốn thu hoạch",
@@ -373,6 +375,7 @@ CollectSection:AddDropdown("PlantDropdown", {
     Default = {},
     Callback = function(values)
         selectedPlantNames = values
+        print("🌱 Cây đã chọn: " .. (#values > 0 and table.concat(values, ", ") or "(Không có)"))
     end
 })
 
@@ -381,31 +384,47 @@ CollectSection:AddToggle("AutoFruitToggle", {
     Default = false,
     Callback = function(state)
         getgenv().AutoCollectFruits = state
+        print(state and "✅ Auto thu hoạch đã bật" or "⏸️ Auto thu hoạch đã tắt")
     end
 })
 
--- Hàm thu thập trái
 local function collectFruit(fruit)
 	if not fruit:IsA("Model") then return end
 	local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
-	if prompt then fireproximityprompt(prompt) return end
+	if prompt then
+		fireproximityprompt(prompt)
+		print("🍎 Đã thu hoạch bằng ProximityPrompt:", fruit.Name)
+		return
+	end
 	local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
-	if click then fireclickdetector(click) return end
+	if click then
+		fireclickdetector(click)
+		print("🍎 Đã thu hoạch bằng ClickDetector:", fruit.Name)
+		return
+	end
+	warn("⚠️ Không tìm thấy cách thu hoạch cho:", fruit:GetFullName())
 end
 
--- Vòng lặp thu hoạch
 task.spawn(function()
 	while true do
-		if getgenv().AutoCollectFruits and playerFarm and #selectedPlantNames > 0 then
-			local plantObjects = playerFarm:FindFirstChild("Important") and playerFarm.Important:FindFirstChild("Plants_Physical")
-			if plantObjects then
-				for _, plant in ipairs(plantObjects:GetChildren()) do
-					if table.find(selectedPlantNames, plant.Name) then
-						local fruits = plant:FindFirstChild("Fruits")
-						if fruits then
-							for _, fruit in ipairs(fruits:GetChildren()) do
-								collectFruit(fruit)
-								task.wait(0.05)
+		if getgenv().AutoCollectFruits then
+			if not playerFarm then
+				warn("🚫 Không có farm người chơi.")
+			else
+				local plantObjects = safeGetPath(playerFarm, {"Important", "Plants_Physical"})
+				if not plantObjects then
+					warn("🚫 Không tìm thấy Plants_Physical trong farm.")
+				else
+					for _, plant in ipairs(plantObjects:GetChildren()) do
+						if table.find(selectedPlantNames, plant.Name) then
+							local fruits = plant:FindFirstChild("Fruits")
+							if fruits then
+								for _, fruit in ipairs(fruits:GetChildren()) do
+									collectFruit(fruit)
+									task.wait(0.05)
+								end
+							else
+								warn("⚠️ Cây không có thư mục Fruits:", plant.Name)
 							end
 						end
 					end
@@ -521,6 +540,3 @@ AutoSaveConfig()
 setupSaveEvents()
 
 print("HT Hub | Anime Saga đã được tải thành công!")
-
--- test
-
