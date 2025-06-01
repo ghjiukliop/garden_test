@@ -333,8 +333,7 @@ end
 -- ...existing code...
 
 -- Thêm section vào tab Play
-
--- Auto Farm Fruit - Giao diện Fluent UI hoàn chỉnh, đảm bảo thu đúng fruit được chọn và dùng đúng tương tác
+-- Auto Farm Fruit - Giao diện Fluent thay cho GUI cũ (giữ nguyên chức năng) + Sửa thu thập + Bật tìm kiếm rõ ràng
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -374,18 +373,7 @@ if not plantObjects then warn("❌ Không tìm thấy Plants_Physical.") return 
 -- Tạo UI Fluent trong tab Play
 local PlaySection = PlayTab:AddSection("Auto Collect Fruit (Fluent Style)")
 
-local autoFarmToggle = PlaySection:AddToggle("FluentAutoFarmToggle", {
-    Title = "Auto Farm fruit cây đã chọn",
-    Default = collecting,
-    Callback = function(state)
-        collecting = state
-        ConfigSystem.CurrentConfig.FluentAutoFarm = state
-        ConfigSystem.SaveConfig()
-        print("🔁 Trạng thái Auto Farm:", state)
-    end
-})
-
-PlaySection:AddDropdown("FluentFruitDropdown", {
+local fruitDropdown = PlaySection:AddDropdown("FluentFruitDropdown", {
     Title = "Chọn cây để farm",
     Values = allPlantNames,
     Multi = true,
@@ -398,26 +386,36 @@ PlaySection:AddDropdown("FluentFruitDropdown", {
         print("✅ Cây đã chọn:", table.concat(values, ", "))
     end
 })
+fruitDropdown:SetSearchEnabled(true) -- đảm bảo thanh tìm kiếm bật
 
--- Hàm thu thập fruit chính xác qua prompt/click
-local function collectFruitDirect(fruit)
-    if not fruit:IsA("Model") then return false end
+PlaySection:AddToggle("FluentAutoFarmToggle", {
+    Title = "Auto Farm fruit cây đã chọn",
+    Default = collecting,
+    Callback = function(state)
+        collecting = state
+        ConfigSystem.CurrentConfig.FluentAutoFarm = state
+        ConfigSystem.SaveConfig()
+        print("🔁 Trạng thái Auto Farm:", state)
+    end
+})
 
-    local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
-    if prompt and prompt.Enabled then
-        fireproximityprompt(prompt)
-        print("🟢 Đã thu thập bằng ProximityPrompt:", fruit.Name)
-        return true
+-- Hàm thu thập fruit
+local function collectFruit(fruit)
+    if not fruit:IsA("Model") then return end
+
+    for _, descendant in ipairs(fruit:GetDescendants()) do
+        if descendant:IsA("ProximityPrompt") and descendant.Enabled then
+            fireproximityprompt(descendant)
+            print("🟢 Thu thập bằng ProximityPrompt:", fruit.Name)
+            return
+        elseif descendant:IsA("ClickDetector") then
+            fireclickdetector(descendant)
+            print("🔵 Thu thập bằng ClickDetector:", fruit.Name)
+            return
+        end
     end
 
-    local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
-    if click then
-        fireclickdetector(click)
-        print("🔵 Đã thu thập bằng ClickDetector:", fruit.Name)
-        return true
-    end
-
-    return false
+    print("⚠️ Không thể thu thập:", fruit.Name)
 end
 
 -- Auto loop
@@ -428,7 +426,7 @@ RunService.Heartbeat:Connect(function()
                 local fruits = plant:FindFirstChild("Fruits")
                 if fruits then
                     for _, fruit in ipairs(fruits:GetChildren()) do
-                        collectFruitDirect(fruit)
+                        collectFruit(fruit)
                         task.wait(0.1)
                     end
                 end
@@ -437,6 +435,8 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
+--end
+--shop 
 -- SHOP SECTION: Mua Pet Egg
 
 
