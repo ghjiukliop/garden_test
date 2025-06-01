@@ -333,9 +333,7 @@ end
 -- ...existing code...
 
 -- Thêm section vào tab Play
--- Auto Farm Fruit - Giao diện Fluent thay cho GUI cũ (giữ nguyên chức năng) + Sửa thu thập + Bật tìm kiếm rõ ràng
--- Auto Farm Fruit - Dùng cách thu thập fruit từ script gốc (Prompt / ClickDetector)
--- Auto Farm Fruit - Đã vá lỗi không thu thập do Prompt/ClickDetector nằm sâu trong model
+-- Auto Farm Fruit - Vá lại hoạt động thu thập cho tương thích hoàn toàn với Fluent UI
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -408,15 +406,16 @@ local function collectFruit(fruit)
         if obj:IsA("ProximityPrompt") and obj.Enabled then
             fireproximityprompt(obj)
             print("🟢 Prompt:", fruit.Name)
-            return
+            return true
         elseif obj:IsA("ClickDetector") then
             fireclickdetector(obj)
             print("🔵 Click:", fruit.Name)
-            return
+            return true
         end
     end
 
     print("⚠️ Không thấy Prompt/ClickDetector:", fruit.Name)
+    return false
 end
 
 -- Tự động thu thập fruit
@@ -424,6 +423,7 @@ RunService.Heartbeat:Connect(function()
     if collecting and #selectedPlantNames > 0 then
         for _, plant in ipairs(plantObjects:GetChildren()) do
             if table.find(selectedPlantNames, plant.Name) then
+                print("🌿 Đang kiểm tra cây:", plant.Name)
                 local fruits = plant:FindFirstChild("Fruits")
                 if fruits then
                     print("📦 Cây", plant.Name, "có", #fruits:GetChildren(), "fruit")
@@ -431,6 +431,8 @@ RunService.Heartbeat:Connect(function()
                         collectFruit(fruit)
                         task.wait(0.1)
                     end
+                else
+                    print("⚠️ Cây", plant.Name, "không có folder Fruits")
                 end
             end
         end
