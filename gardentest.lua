@@ -187,7 +187,7 @@ local playerName = game:GetService("Players").LocalPlayer.Name
 
 -- Tạo Window
 local Window = Fluent:CreateWindow({
-    Title = "HT Hub | Anime Saga",
+    Title = "HT Hub | Grow a Garden",
     SubTitle = "",
     TabWidth = 140,
     Size = UDim2.fromOffset(450, 350),
@@ -272,7 +272,7 @@ Window:SelectTab(1) -- Chọn tab đầu tiên (Info)
 local InfoSection = InfoTab:AddSection("Thông tin")
 
 InfoSection:AddParagraph({
-    Title = "Anime Saga",
+    Title = "Grow a Garden",
     Content = "Phiên bản: 1.0 Beta\nTrạng thái: Hoạt động"
 })
 
@@ -332,7 +332,9 @@ end
 
 -- ...existing code...
 
--- Auto Farm Fruit - Chuyển GUI thủ công sang Fluent UI
+-- Thêm section vào tab Play
+-- Auto Farm Fruit - Giao diện Fluent thay cho GUI cũ (giữ nguyên chức năng) + Sửa thu thập + Bật tìm kiếm rõ ràng
+-- Auto Farm Fruit - Dùng cách thu thập fruit từ script gốc (Prompt / ClickDetector)
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -387,7 +389,7 @@ PlaySection:AddDropdown("FruitTypeDropdown", {
     Title = "Chọn cây muốn thu thập",
     Values = allPlantNames,
     Multi = true,
-    Search = true, -- đây mới là cách chính xác để bật tìm kiếm
+    Search = true,
     Default = selectedPlantNames,
     Callback = function(values)
         selectedPlantNames = values
@@ -397,38 +399,42 @@ PlaySection:AddDropdown("FruitTypeDropdown", {
     end
 })
 
-
--- Hàm thu thập
+-- Hàm thu thập sử dụng Prompt / ClickDetector
 local function collectFruit(fruit)
     if not fruit:IsA("Model") then return end
     local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
-    if prompt and prompt.Enabled then fireproximityprompt(prompt) return end
+    if prompt and prompt.Enabled then
+        fireproximityprompt(prompt)
+        print("🟢 Thu thập bằng Prompt:", fruit.Name)
+        return
+    end
     local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
-    if click then fireclickdetector(click) return end
+    if click then
+        fireclickdetector(click)
+        print("🔵 Thu thập bằng ClickDetector:", fruit.Name)
+        return
+    end
 end
 
--- Vòng lặp tự động
-task.spawn(function()
-    while true do
-        if collecting and #selectedPlantNames > 0 then
-            for _, plant in ipairs(plantObjects:GetChildren()) do
-                if table.find(selectedPlantNames, plant.Name) then
-                    local fruits = plant:FindFirstChild("Fruits")
-                    if fruits then
-                        for _, fruit in ipairs(fruits:GetChildren()) do
-                            collectFruit(fruit)
-                            task.wait(0.05)
-                        end
+-- Tự động thu thập fruit
+RunService.Heartbeat:Connect(function()
+    if collecting and #selectedPlantNames > 0 then
+        for _, plant in ipairs(plantObjects:GetChildren()) do
+            if table.find(selectedPlantNames, plant.Name) then
+                local fruits = plant:FindFirstChild("Fruits")
+                if fruits then
+                    for _, fruit in ipairs(fruits:GetChildren()) do
+                        collectFruit(fruit)
+                        task.wait(0.05)
                     end
                 end
             end
         end
-        task.wait(0.1)
-    end
+    end 
 end)
 
 
--- ...existing code...
+--end
 --shop 
 -- SHOP SECTION: Mua Pet Egg
 
