@@ -333,9 +333,7 @@ end
 -- ...existing code...
 
 -- Thêm section vào tab Play
--- Dropdown + Multi-Select + Auto Farm Fruits (dò cây đã chọn trong kho tất cả cây và farm trong farm người chơi) + Lưu lựa chọn
--- Auto Farm Fruit - Giao diện Fluent thay cho GUI cũ (giữ nguyên chức năng)
--- Auto Farm Fruit - Giao diện Fluent thay cho GUI cũ (giữ nguyên chức năng) + Fix tìm kiếm và thu thập
+-- Auto Farm Fruit - Giao diện Fluent thay cho GUI cũ (giữ nguyên chức năng) + Sửa thu thập + Bật tìm kiếm rõ ràng
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -375,7 +373,7 @@ if not plantObjects then warn("❌ Không tìm thấy Plants_Physical.") return 
 -- Tạo UI Fluent trong tab Play
 local PlaySection = PlayTab:AddSection("Auto Collect Fruit (Fluent Style)")
 
-PlaySection:AddDropdown("FluentFruitDropdown", {
+local fruitDropdown = PlaySection:AddDropdown("FluentFruitDropdown", {
     Title = "Chọn cây để farm",
     Values = allPlantNames,
     Multi = true,
@@ -388,6 +386,7 @@ PlaySection:AddDropdown("FluentFruitDropdown", {
         print("✅ Cây đã chọn:", table.concat(values, ", "))
     end
 })
+fruitDropdown:SetSearchEnabled(true) -- đảm bảo thanh tìm kiếm bật
 
 PlaySection:AddToggle("FluentAutoFarmToggle", {
     Title = "Auto Farm fruit cây đã chọn",
@@ -404,18 +403,16 @@ PlaySection:AddToggle("FluentAutoFarmToggle", {
 local function collectFruit(fruit)
     if not fruit:IsA("Model") then return end
 
-    local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
-    if prompt and prompt:IsDescendantOf(fruit) and prompt.Enabled then
-        fireproximityprompt(prompt)
-        print("🟢 Thu thập bằng ProximityPrompt:", fruit.Name)
-        return
-    end
-
-    local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
-    if click and click:IsDescendantOf(fruit) then
-        fireclickdetector(click)
-        print("🔵 Thu thập bằng ClickDetector:", fruit.Name)
-        return
+    for _, descendant in ipairs(fruit:GetDescendants()) do
+        if descendant:IsA("ProximityPrompt") and descendant.Enabled then
+            fireproximityprompt(descendant)
+            print("🟢 Thu thập bằng ProximityPrompt:", fruit.Name)
+            return
+        elseif descendant:IsA("ClickDetector") then
+            fireclickdetector(descendant)
+            print("🔵 Thu thập bằng ClickDetector:", fruit.Name)
+            return
+        end
     end
 
     print("⚠️ Không thể thu thập:", fruit.Name)
@@ -437,6 +434,7 @@ RunService.Heartbeat:Connect(function()
         end
     end
 end)
+
 --end
 --shop 
 -- SHOP SECTION: Mua Pet Egg
