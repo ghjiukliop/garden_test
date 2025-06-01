@@ -332,7 +332,6 @@ end
 
 -- ...existing code...
 
--- Auto Farm Fruit - Chuyển GUI thủ công sang Fluent UI
 
 
 -- ...existing code...
