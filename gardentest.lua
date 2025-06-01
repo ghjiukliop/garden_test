@@ -333,7 +333,9 @@ end
 -- ...existing code...
 
 -- Thêm section vào tab Play
+-- Dropdown + Multi-Select + Auto Farm Fruits (dò cây đã chọn trong kho tất cả cây và farm trong farm người chơi) + Lưu lựa chọn
 
+-- Danh sách toàn bộ cây có trong game từ ReplicatedStorage.Fruit_Spawn
 local fruitNames = {
     "Apple", "Avocado", "Banana", "Beanstalk", "Blood Banana", "Blueberry", "Cacao",
     "Cactus", "Candy Blossom", "Celestiberry", "Cherry Blossom", "Cherry OLD", "Coconut",
@@ -381,7 +383,10 @@ PlaySection:AddToggle("AutoFarmSelectedFruitsToggle", {
 
 local function getOwnedFarms()
     local owned = {}
-    for _, farm in ipairs(workspace.Farm:GetChildren()) do
+    local farms = workspace:FindFirstChild("Farm")
+    if not farms then return owned end
+
+    for _, farm in ipairs(farms:GetChildren()) do
         local ok, owner = pcall(function()
             return farm.Important.Data.Owner.Value
         end)
@@ -423,6 +428,7 @@ local function spamEUntilGone(fruit)
 end
 
 -- Vòng lặp chính auto farm
+-- Chỉ farm những cây có trong danh sách dropdown và cũng có mặt trong farm của người chơi
 task.spawn(function()
     while true do
         if getgenv().AutoFarmSelectedFruits then
@@ -448,6 +454,7 @@ task.spawn(function()
         task.wait(1)
     end
 end)
+--end
 
 
 -- ...existing code...
