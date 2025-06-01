@@ -387,7 +387,7 @@ PlaySection:AddDropdown("FruitTypeDropdown", {
     Title = "Chọn cây muốn thu thập",
     Values = allPlantNames,
     Multi = true,
-    Search = true,
+    Search = true, -- đây mới là cách chính xác để bật tìm kiếm
     Default = selectedPlantNames,
     Callback = function(values)
         selectedPlantNames = values
@@ -396,6 +396,7 @@ PlaySection:AddDropdown("FruitTypeDropdown", {
         print("🌱 Cây đã chọn:", table.concat(values, ", "))
     end
 })
+
 
 -- Hàm thu thập
 local function collectFruit(fruit)
