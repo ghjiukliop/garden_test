@@ -187,7 +187,7 @@ local playerName = game:GetService("Players").LocalPlayer.Name
 
 -- Tạo Window
 local Window = Fluent:CreateWindow({
-    Title = "HT Hub | Grow a Garden",
+    Title = "HT Hub | Anime Saga",
     SubTitle = "",
     TabWidth = 140,
     Size = UDim2.fromOffset(450, 350),
@@ -272,7 +272,7 @@ Window:SelectTab(1) -- Chọn tab đầu tiên (Info)
 local InfoSection = InfoTab:AddSection("Thông tin")
 
 InfoSection:AddParagraph({
-    Title = "Grow a Garden",
+    Title = "Anime Saga",
     Content = "Phiên bản: 1.0 Beta\nTrạng thái: Hoạt động"
 })
 
@@ -332,9 +332,8 @@ end
 
 -- ...existing code...
 
--- Thêm section vào tab Play
--- Auto Farm Fruit - Vá lại hoạt động thu thập cho tương thích hoàn toàn với Fluent UI
-
+-- Auto Farm Fruit - Chuyển GUI thủ công sang Fluent UI
+--// Dịch vụ
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
@@ -370,7 +369,7 @@ if not playerFarm then warn("❌ Không tìm thấy farm của người chơi.")
 local plantObjects = playerFarm.Important:FindFirstChild("Plants_Physical")
 if not plantObjects then warn("❌ Không tìm thấy Plants_Physical.") return end
 
--- Giao diện Fluent
+-- Giao diện Fluent UI trong Tab "Play"
 local PlaySection = PlayTab:AddSection("🌿 Auto Fruit Collector")
 
 PlaySection:AddToggle("AutoFarmToggle", {
@@ -388,7 +387,7 @@ PlaySection:AddDropdown("FruitTypeDropdown", {
     Title = "Chọn cây muốn thu thập",
     Values = allPlantNames,
     Multi = true,
-    Search = true,
+    Search = true, -- Kích hoạt thanh tìm kiếm
     Default = selectedPlantNames,
     Callback = function(values)
         selectedPlantNames = values
@@ -398,50 +397,36 @@ PlaySection:AddDropdown("FruitTypeDropdown", {
     end
 })
 
--- Hàm thu thập: tìm toàn bộ Prompt/ClickDetector trong toàn bộ descendants
+-- Hàm thu thập
 local function collectFruit(fruit)
     if not fruit:IsA("Model") then return end
-
-    for _, obj in ipairs(fruit:GetDescendants()) do
-        if obj:IsA("ProximityPrompt") and obj.Enabled then
-            fireproximityprompt(obj)
-            print("🟢 Prompt:", fruit.Name)
-            return true
-        elseif obj:IsA("ClickDetector") then
-            fireclickdetector(obj)
-            print("🔵 Click:", fruit.Name)
-            return true
-        end
-    end
-
-    print("⚠️ Không thấy Prompt/ClickDetector:", fruit.Name)
-    return false
+    local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
+    if prompt and prompt.Enabled then fireproximityprompt(prompt) return end
+    local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
+    if click then fireclickdetector(click) return end
 end
 
--- Tự động thu thập fruit
-RunService.Heartbeat:Connect(function()
-    if collecting and #selectedPlantNames > 0 then
-        for _, plant in ipairs(plantObjects:GetChildren()) do
-            if table.find(selectedPlantNames, plant.Name) then
-                print("🌿 Đang kiểm tra cây:", plant.Name)
-                local fruits = plant:FindFirstChild("Fruits")
-                if fruits then
-                    print("📦 Cây", plant.Name, "có", #fruits:GetChildren(), "fruit")
-                    for _, fruit in ipairs(fruits:GetChildren()) do
-                        collectFruit(fruit)
-                        task.wait(0.1)
+-- Vòng lặp tự động thu thập
+task.spawn(function()
+    while true do
+        if collecting and #selectedPlantNames > 0 then
+            for _, plant in ipairs(plantObjects:GetChildren()) do
+                if table.find(selectedPlantNames, plant.Name) then
+                    local fruits = plant:FindFirstChild("Fruits")
+                    if fruits then
+                        for _, fruit in ipairs(fruits:GetChildren()) do
+                            collectFruit(fruit)
+                            task.wait(0.05)
+                        end
                     end
-                else
-                    print("⚠️ Cây", plant.Name, "không có folder Fruits")
                 end
             end
         end
+        task.wait(0.1)
     end
 end)
 
-
-
---end
+-- ...existing code...
 --shop 
 -- SHOP SECTION: Mua Pet Egg
 
