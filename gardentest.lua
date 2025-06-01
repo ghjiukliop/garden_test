@@ -187,7 +187,7 @@ local playerName = game:GetService("Players").LocalPlayer.Name
 
 -- Tạo Window
 local Window = Fluent:CreateWindow({
-    Title = "HT Hub | Grow a Garden",
+    Title = "HT Hub | Anime Saga",
     SubTitle = "",
     TabWidth = 140,
     Size = UDim2.fromOffset(450, 350),
@@ -272,7 +272,7 @@ Window:SelectTab(1) -- Chọn tab đầu tiên (Info)
 local InfoSection = InfoTab:AddSection("Thông tin")
 
 InfoSection:AddParagraph({
-    Title = "Grow a Garden",
+    Title = "Anime Saga",
     Content = "Phiên bản: 1.0 Beta\nTrạng thái: Hoạt động"
 })
 
@@ -331,16 +331,12 @@ local function setupSaveEvents()
 end
 
 -- ...existing code...
+-- Tích hợp với Fluent UI của script chính (HT Hub)
+-- Chèn vào sau khi đã tạo Fluent và các Tab trong script chính
 
--- Thêm section vào tab Play
+local FluentSection = PlayTab:AddSection("Auto Thu Hoạch")
 
-
---// Dịch vụ
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local RunService = game:GetService("RunService")
-
--- Danh sách cây cố định từ game
+-- Danh sách tên cây cố định
 local allPlantNames = {
     "Apple", "Avocado", "Banana", "Beanstalk", "Blood Banana", "Blueberry", "Cacao", "Cactus", "Candy Blossom",
     "Celestiberry", "Cherry Blossom", "Cherry OLD", "Coconut", "Corn", "Cranberry", "Crimson Vine", "Cursed Fruit",
@@ -351,8 +347,8 @@ local allPlantNames = {
     "Tomato", "Venus Fly Trap"
 }
 
-local selectedPlantNames = ConfigSystem.CurrentConfig.FluentSelectedFruits or {}
-local collecting = ConfigSystem.CurrentConfig.FluentAutoFarm or false
+local selectedPlantNames = {}
+local collecting = false
 
 -- Tìm farm người chơi
 local playerFarm
@@ -360,55 +356,55 @@ local farms = workspace:FindFirstChild("Farm")
 if farms then
     for _, farm in ipairs(farms:GetChildren()) do
         local owner = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data") and farm.Important.Data:FindFirstChild("Owner")
-        if owner and owner.Value == LocalPlayer.Name then
+        if owner and owner.Value == player.Name then
             playerFarm = farm
             break
         end
     end
 end
 
-if not playerFarm then warn("❌ Không tìm thấy farm của người chơi.") return end
+if not playerFarm then
+    warn("❌ Không tìm thấy farm của người chơi.")
+    return
+end
+
 local plantObjects = playerFarm.Important:FindFirstChild("Plants_Physical")
-if not plantObjects then warn("❌ Không tìm thấy Plants_Physical.") return end
+if not plantObjects then
+    warn("❌ Không tìm thấy Plants_Physical.")
+    return
+end
 
--- Giao diện Fluent UI trong Tab "Play"
-local PlaySection = PlayTab:AddSection(" Collector")
-
-PlaySection:AddToggle("AutoFarmToggle", {
-    Title = "Auto Farm cây đã chọn",
-    Default = collecting,
-    Callback = function(state)
-        collecting = state
-        ConfigSystem.CurrentConfig.FluentAutoFarm = state
-        ConfigSystem.SaveConfig()
-        print("🔁 Auto Farm:", state)
-    end
-})
-
-PlaySection:AddDropdown("FruitTypeDropdown", {
-    Title = "Chọn cây muốn thu thập",
+-- Dropdown chọn cây
+FluentSection:AddDropdown("PlantDropdown", {
+    Title = "Chọn cây cần thu hoạch",
     Values = allPlantNames,
     Multi = true,
-    Search = true, -- Kích hoạt thanh tìm kiếm
-    Default = selectedPlantNames,
+    Default = {},
     Callback = function(values)
         selectedPlantNames = values
-        ConfigSystem.CurrentConfig.FluentSelectedFruits = values
-        ConfigSystem.SaveConfig()
-        print("🌱 Cây đã chọn:", table.concat(values, ", "))
+        print("Đã chọn cây: " .. table.concat(values, ", "))
     end
 })
 
--- Hàm thu thập
+-- Nút bật tắt Auto thu hoạch
+FluentSection:AddToggle("AutoCollectFruits", {
+    Title = "Auto thu hoạch",
+    Default = false,
+    Callback = function(state)
+        collecting = state
+    end
+})
+
+-- Hàm thu thập quả
 local function collectFruit(fruit)
     if not fruit:IsA("Model") then return end
     local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
-    if prompt and prompt.Enabled then fireproximityprompt(prompt) return end
+    if prompt then fireproximityprompt(prompt) return end
     local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
     if click then fireclickdetector(click) return end
 end
 
--- Vòng lặp tự động thu thập
+-- Tự động thu thập
 task.spawn(function()
     while true do
         if collecting and #selectedPlantNames > 0 then
@@ -428,7 +424,147 @@ task.spawn(function()
     end
 end)
 
---end
+-- Thêm section vào tab Play
+local PlaySection = PlayTab:AddSection("Auto Collect")
+
+-- Biến trạng thái auto collect
+getgenv().AutoCollectFruits = false
+
+-- Toggle Auto Collect
+PlaySection:AddToggle("AutoCollectFruitsToggle", {
+    Title = "Auto Collect Fruits",
+    Default = false,
+    Callback = function(Value)
+        getgenv().AutoCollectFruits = Value
+        print("Auto Collect Fruits: " .. tostring(Value))
+    end
+})
+
+-- Hàm auto collect fruits (spam E)
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+local function getHumanoidRootPart()
+    if LocalPlayer.Character then
+        return LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    end
+    return nil
+end
+
+local function getOwnedFarms()
+    local farms = {}
+    local FarmObjects = workspace.Farm:GetChildren()
+    for _, farm in ipairs(FarmObjects) do
+        local success, isOwned = pcall(function()
+            return farm.Important.Data.Owner.Value == LocalPlayer.Name
+        end)
+        if success and isOwned then
+            table.insert(farms, farm)
+        end
+    end
+    return farms
+end
+
+local function getPlantsFromFarm(farm)
+    local plants = {}
+    local plantsFolder = farm.Important:FindFirstChild("Plants_Physical")
+    if plantsFolder then
+        for _, plant in ipairs(plantsFolder:GetChildren()) do
+            if plant:IsA("Model") then
+                table.insert(plants, plant)
+            end
+        end
+    end
+    return plants
+end
+
+local function getFruitsFromPlant(plant)
+    local fruits = {}
+    local fruitsFolder = plant:FindFirstChild("Fruits")
+    if fruitsFolder then
+        for _, fruit in ipairs(fruitsFolder:GetChildren()) do
+            if fruit:IsA("Model") and fruit.PrimaryPart then
+                table.insert(fruits, fruit)
+            end
+        end
+    end
+    return fruits
+end
+
+local function teleportTo(position)
+    local hrp = getHumanoidRootPart()
+    if hrp then
+        hrp.CFrame = CFrame.new(position) * CFrame.new(0,3,0)
+    end
+end
+
+local function spamEUntilFruitGone(fruit)
+    if not fruit or not fruit.PrimaryPart then return end
+
+    local fruitExists = true
+    local conn
+    conn = fruit.AncestryChanged:Connect(function(_, parent)
+        if not parent then
+            fruitExists = false
+            conn:Disconnect()
+        end
+    end)
+
+    while fruitExists and getgenv().AutoCollectFruits do
+        local ok, err = pcall(function()
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+            wait(0.05)
+            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+        end)
+        if not ok then
+            warn("Lỗi khi spam phím E: " .. tostring(err))
+            break
+        end
+        wait(0.2)
+    end
+end
+
+-- Thread auto collect
+task.spawn(function()
+    while true do
+        if getgenv().AutoCollectFruits then
+            local hrp = getHumanoidRootPart()
+            if not hrp then
+                print("Chưa tìm thấy HumanoidRootPart, đợi nhân vật load lại...")
+                wait(3)
+            else
+                local farms = getOwnedFarms()
+                if #farms == 0 then
+                    print("Bạn không sở hữu farm nào.")
+                    wait(5)
+                else
+                    for _, farm in ipairs(farms) do
+                        local plants = getPlantsFromFarm(farm)
+                        for _, plant in ipairs(plants) do
+                            local fruits = getFruitsFromPlant(plant)
+                            for _, fruit in ipairs(fruits) do
+                                if not getgenv().AutoCollectFruits then break end
+                                if fruit and fruit.PrimaryPart then
+                                    teleportTo(fruit.PrimaryPart.Position)
+                                    wait(0.1)
+                                    spamEUntilFruitGone(fruit)
+                                end
+                            end
+                            if not getgenv().AutoCollectFruits then break end
+                        end
+                        if not getgenv().AutoCollectFruits then break end
+                    end
+                    wait(1)
+                end
+            end
+        else
+            wait(1)
+        end
+    end
+end)
+
+-- ...existing code...
 --shop 
 -- SHOP SECTION: Mua Pet Egg
 
