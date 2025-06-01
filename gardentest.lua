@@ -374,13 +374,22 @@ CollectSection:AddDropdown("PlantDropdown", {
     Multi = true,
     Default = {},
     Callback = function(values)
+        print("🧪 Raw values:", typeof(values), values)
+        for i,v in ipairs(values) do
+            print("✅ Cây chọn:", v)
+        end
         selectedPlantNames = values
-        print("🌱 Cây đã chọn: " .. (#values > 0 and table.concat(values, ", ") or "(Không có)"))
+        if #selectedPlantNames == 0 then
+            warn("⚠️ Không có cây nào được chọn.")
+        else
+            print("🌱 Cây đã chọn:", table.concat(selectedPlantNames, ", "))
+        end
     end
 })
 
+
 CollectSection:AddToggle("AutoFruitToggle", {
-    Title = "Tự động thu hoạch trái cây2",
+    Title = "Tự động thu hoạch trái cây",
     Default = false,
     Callback = function(state)
         getgenv().AutoCollectFruits = state
