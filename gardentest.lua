@@ -364,7 +364,7 @@ PlaySection:AddDropdown("FruitTypeDropdown", {
         selectedFruits = values
         ConfigSystem.CurrentConfig.SelectedFruits = selectedFruits
         ConfigSystem.SaveConfig()
-        print("Đã chọn cây:", table.concat(selectedFruits, ", "))
+        print("✅ Bạn đã chọn các cây sau để farm: " .. table.concat(selectedFruits, ", "))
     end
 })
 
@@ -377,7 +377,10 @@ PlaySection:AddToggle("AutoFarmSelectedFruitsToggle", {
         getgenv().AutoFarmSelectedFruits = state
         ConfigSystem.CurrentConfig.AutoFarmSelectedFruits = state
         ConfigSystem.SaveConfig()
-        print("Auto Farm Fruits Selected:", state)
+        print("🔁 Trạng thái Auto Farm cây đã chọn: " .. tostring(state))
+        if state then
+            print("📦 Đang tìm cây phù hợp trong farm của bạn...")
+        end
     end
 })
 
@@ -386,7 +389,7 @@ local function getOwnedFarms()
     local farms = workspace:FindFirstChild("Farm")
     if not farms then return owned end
 
-    for _, farm in ipairs(farms:GetChildren()) do
+    for i, farm in ipairs(farms:GetChildren()) do
         local ok, owner = pcall(function()
             return farm.Important.Data.Owner.Value
         end)
@@ -431,14 +434,15 @@ end
 -- Chỉ farm những cây có trong danh sách dropdown và cũng có mặt trong farm của người chơi
 task.spawn(function()
     while true do
-        if getgenv().AutoFarmSelectedFruits then
+        if getgenv().AutoFarmSelectedFruits and #selectedFruits > 0 then
             local farms = getOwnedFarms()
-            for _, farm in ipairs(farms) do
+            for farmIndex, farm in ipairs(farms) do
                 local plantsFolder = farm:FindFirstChild("Important")
                     and farm.Important:FindFirstChild("Plants_Physical")
                 if plantsFolder then
                     for _, plant in ipairs(plantsFolder:GetChildren()) do
                         if table.find(selectedFruits, plant.Name) then
+                            print("🌿 Đang farm cây: " .. plant.Name .. " trong farm số " .. tostring(farmIndex))
                             local fruits = getFruitsInPlant(plant)
                             for _, fruit in ipairs(fruits) do
                                 if not getgenv().AutoFarmSelectedFruits then break end
@@ -455,9 +459,6 @@ task.spawn(function()
     end
 end)
 --end
-
-
--- ...existing code...
 --shop 
 -- SHOP SECTION: Mua Pet Egg
 
