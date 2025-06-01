@@ -380,7 +380,7 @@ CollectSection:AddDropdown("PlantDropdown", {
 })
 
 CollectSection:AddToggle("AutoFruitToggle", {
-    Title = "Tự động thu hoạch trái cây",
+    Title = "Tự động thu hoạch trái cây2",
     Default = false,
     Callback = function(state)
         getgenv().AutoCollectFruits = state
