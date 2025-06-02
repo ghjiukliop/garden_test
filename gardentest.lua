@@ -331,19 +331,17 @@ local function setupSaveEvents()
 end
 
 -- ...existing code...
--- Dịch vụ
+-- Dịch vụ-- Giả sử bạn đã có biến PlayTab (tab chính để thêm section)
+
+-- Tìm farm người chơi và lấy danh sách cây (đảm bảo chạy trước phần UI)
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
--- Tìm farm của người chơi
-local farms = workspace:FindFirstChild("Farm")
 local playerFarm = nil
-
+local farms = workspace:FindFirstChild("Farm")
 if farms then
     for _, farm in ipairs(farms:GetChildren()) do
-        local ownerData = farm:FindFirstChild("Important") 
-                          and farm.Important:FindFirstChild("Data") 
-                          and farm.Important.Data:FindFirstChild("Owner")
+        local ownerData = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data") and farm.Important.Data:FindFirstChild("Owner")
         if ownerData and ownerData.Value == player.Name then
             playerFarm = farm
             break
@@ -352,45 +350,66 @@ if farms then
 end
 
 if not playerFarm then
-    warn("❌ Không tìm thấy farm của bạn.")
+    warn("❌ Không tìm thấy farm của người chơi.")
     return
 end
 
--- Lấy thư mục Plants_Physical
-local plantsFolder = playerFarm:FindFirstChild("Important") and playerFarm.Important:FindFirstChild("Plants_Physical")
-if not plantsFolder then
-    warn("❌ Không tìm thấy Plants_Physical trong farm của bạn.")
+local plantObjects = playerFarm.Important:FindFirstChild("Plants_Physical")
+if not plantObjects then
+    warn("❌ Không tìm thấy Plants_Physical trong farm.")
     return
 end
 
--- Lấy tên cây duy nhất
-local uniquePlantNames = {}
-for _, plant in ipairs(plantsFolder:GetChildren()) do
-    uniquePlantNames[plant.Name] = true
-end
-
+-- Lấy danh sách tên cây không trùng
 local availablePlantNames = {}
-for name, _ in pairs(uniquePlantNames) do
-    table.insert(availablePlantNames, name)
+local uniqueNames = {}
+for _, plant in ipairs(plantObjects:GetChildren()) do
+    if not uniqueNames[plant.Name] then
+        table.insert(availablePlantNames, plant.Name)
+        uniqueNames[plant.Name] = true
+    end
 end
-table.sort(availablePlantNames)
-
--- Tạo section Auto Farm trong PlayTab (giả sử bạn có biến PlayTab)
-local AutoFarmSection = PlayTab:AddSection("Auto Farm")
 
 local selectedPlantNames = {}
 
-AutoFarmSection:AddDropdown("PlantDropdown1", {
-    Title = "🌿1 Chọn cây cần farm",
+-- Tạo section Auto Farm trong tab Play
+local AutoFarmSection = PlayTab:AddSection("Auto Farm")
+
+-- Thêm Dropdown chọn cây cần farm (multi select)
+AutoFarmSection:AddDropdown("PlantDropdown", {
+    Title = "🌿22 Chọn cây cần farm ",
     Values = availablePlantNames,
     Multi = true,
     Default = {},
     Callback = function(values)
-        selectedPlantNames = values or {}
+        -- Debug log giá trị callback nhận
+        print("DEBUG selected values:", values)
+        
+        if type(values) ~= "table" then
+            values = {}
+        end
+
+        selectedPlantNames = values
+
         if #selectedPlantNames == 0 then
             print("❗ Bạn chưa chọn cây nào.")
         else
             print("🌿 Bạn đã chọn các cây: " .. table.concat(selectedPlantNames, ", "))
+        end
+    end
+})
+
+-- Có thể thêm Toggle bật tắt Auto Farm (nếu cần)
+local collecting = false
+AutoFarmSection:AddToggle("AutoFarmToggle", {
+    Title = "Tự Động Thu Hoạch",
+    Default = false,
+    Callback = function(value)
+        collecting = value
+        print("[⚙️] Auto Farm: " .. (collecting and "BẬT" or "TẮT"))
+        
+        if collecting and #selectedPlantNames == 0 then
+            print("❗ Bạn chưa chọn cây nào để thu hoạch.")
         end
     end
 })
