@@ -333,7 +333,7 @@ end
 -- ...existing code...
 -- Dịch vụ và người chơi
 --// Fluent UI: Add Auto Farm section in Play Tab
-local AutoFarmSection = PlayTab:AddSection("Auto Farm")
+local AutoFarmSection = PlayTab:AddSection("Auto Farm2")
 
 --// Services
 local Players = game:GetService("Players")
