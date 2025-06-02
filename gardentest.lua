@@ -332,7 +332,7 @@ end
 
 -- ...existing code...
 -- Dịch vụ và người chơi
--- Dịch vụ và biến
+-- 📦 Dịch vụ và biến
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local RunService = game:GetService("RunService")
@@ -341,7 +341,7 @@ local selectedPlantNames = {}
 local collecting = false
 local playerFarm
 
--- Tìm farm người chơi
+-- 🌱 Tìm farm người chơi
 local farms = workspace:FindFirstChild("Farm")
 if farms then
 	for _, farm in ipairs(farms:GetChildren()) do
@@ -364,10 +364,10 @@ if not plantObjects then
 	return
 end
 
--- Thêm section Auto Farm trong tab Play
+-- 🧩 Thêm section Auto Farm trong tab Play
 local AutoFarmSection = PlayTab:AddSection("Auto Farm")
 
--- Danh sách tên cây có sẵn
+-- 📋 Lấy danh sách tên cây duy nhất
 local availablePlantNames = {}
 local uniqueNames = {}
 for _, plant in ipairs(plantObjects:GetChildren()) do
@@ -377,7 +377,7 @@ for _, plant in ipairs(plantObjects:GetChildren()) do
 	end
 end
 
--- Dropdown chọn loại cây cần farm
+-- 🔽 Dropdown chọn loại cây cần farm
 AutoFarmSection:AddDropdown("PlantDropdown", {
 	Title = "🌿 Chọn cây cần farm",
 	Values = availablePlantNames,
@@ -385,44 +385,74 @@ AutoFarmSection:AddDropdown("PlantDropdown", {
 	Default = {},
 	Callback = function(values)
 		selectedPlantNames = values
+		if #selectedPlantNames > 0 then
+			print("✅ Bạn đã chọn các cây sau để thu hoạch:")
+			for _, v in ipairs(selectedPlantNames) do
+				print(" - " .. v)
+			end
+		else
+			print("⚠️ Bạn chưa chọn loại cây nào.")
+		end
 	end
 })
 
--- Toggle bật/tắt auto farm
-AutoFarmSection:AddToggle("ToggleAutoFarm", {
-	Title = "⚙️ Bật Auto Farm",
+-- 🔘 Toggle bật/tắt auto farm
+AutoFarmSection:AddToggle("AutoFarmToggle", {
+	Title = "Tự Động Thu Hoạch",
 	Default = false,
-	Callback = function(state)
-		collecting = state
+	Callback = function(Value)
+		collecting = Value
+		print("[⚙️] Auto Farm: " .. (collecting and "BẬT" or "TẮT"))
+
+		if collecting then
+			if #selectedPlantNames == 0 then
+				print("❗ Bạn chưa chọn cây nào để thu hoạch.")
+			end
+		end
 	end
 })
 
--- Hàm thu hoạch quả
+-- 🍇 Hàm thu hoạch quả
 local function collectFruit(fruit)
 	if not fruit:IsA("Model") then return end
+
 	local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
-	if prompt then fireproximityprompt(prompt) return end
+	if prompt then
+		print("📦 Thu hoạch bằng Prompt:", fruit.Name)
+		fireproximityprompt(prompt)
+		return
+	end
+
 	local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
-	if click then fireclickdetector(click) return end
+	if click then
+		print("🖱️ Thu hoạch bằng Click:", fruit.Name)
+		fireclickdetector(click)
+		return
+	end
+
+	print("❌ Không tìm thấy phương thức thu hoạch:", fruit.Name)
 end
 
--- Vòng lặp thu hoạch
+-- 🔁 Vòng lặp thu hoạch
 task.spawn(function()
 	while true do
 		if collecting and #selectedPlantNames > 0 then
 			for _, plant in ipairs(plantObjects:GetChildren()) do
 				if table.find(selectedPlantNames, plant.Name) then
+					print("🔍 Đang kiểm tra cây:", plant.Name)
 					local fruits = plant:FindFirstChild("Fruits")
 					if fruits then
 						for _, fruit in ipairs(fruits:GetChildren()) do
 							collectFruit(fruit)
 							task.wait(0.05)
 						end
+					else
+						print("⚠️ Cây", plant.Name, "không có thư mục Fruits.")
 					end
 				end
 			end
 		end
-		task.wait(0.1)
+		task.wait(0.2)
 	end
 end)
 
