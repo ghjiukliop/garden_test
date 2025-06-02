@@ -332,119 +332,98 @@ end
 
 -- ...existing code...
 -- Dịch vụ và người chơi
--- Giả định rằng bạn đã có `PlayTab` được tạo bằng Fluent như sau:
--- local PlayTab = Window:AddTab({ Title = "Play", Icon = "rbxassetid://7734053495" })
+--// Fluent UI: Add Auto Farm section in Play Tab
+local AutoFarmSection = PlayTab:AddSection("Auto Farm")
 
--- Dịch vụ
+--// Services
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 
+--// Internal states
 local selectedPlantNames = {}
 local collecting = false
 local playerFarm
 
--- Tìm farm của người chơi
+--// Find player farm
 local farms = workspace:FindFirstChild("Farm")
 if farms then
-	for _, farm in ipairs(farms:GetChildren()) do
-		local owner = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data") and farm.Important.Data:FindFirstChild("Owner")
-		if owner and owner.Value == player.Name then
-			playerFarm = farm
-			break
-		end
-	end
+    for _, farm in ipairs(farms:GetChildren()) do
+        local owner = farm:FindFirstChild("Important")
+            and farm.Important:FindFirstChild("Data")
+            and farm.Important.Data:FindFirstChild("Owner")
+        if owner and owner.Value == player.Name then
+            playerFarm = farm
+            break
+        end
+    end
 end
 
 if not playerFarm then
-	warn("❌ Không tìm thấy farm của người chơi.")
-	return
+    warn("❌ Không tìm thấy farm của người chơi.")
+    return
 end
 
 local plantObjects = playerFarm.Important:FindFirstChild("Plants_Physical")
 if not plantObjects then
-	warn("❌ Không tìm thấy Plants_Physical.")
-	return
+    warn("❌ Không tìm thấy Plants_Physical.")
+    return
 end
 
--- Tạo section Auto Farm trong tab Play
-local AutoFarmSection = PlayTab:AddSection("Auto Farm")
+--// Collect fruit helper
+local function collectFruit(fruit)
+    if not fruit:IsA("Model") then return end
+    local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
+    if prompt then fireproximityprompt(prompt) return end
+    local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
+    if click then fireclickdetector(click) return end
+end
 
--- Thêm danh sách chọn cây (Dropdown nhiều lựa chọn)
+--// Start fruit collecting loop
+task.spawn(function()
+    while true do
+        if collecting and #selectedPlantNames > 0 then
+            for _, plant in ipairs(plantObjects:GetChildren()) do
+                if table.find(selectedPlantNames, plant.Name) then
+                    local fruits = plant:FindFirstChild("Fruits")
+                    if fruits then
+                        for _, fruit in ipairs(fruits:GetChildren()) do
+                            collectFruit(fruit)
+                            task.wait(0.05)
+                        end
+                    end
+                end
+            end
+        end
+        task.wait(0.1)
+    end
+end)
+
+--// Fluent UI: Dropdown to choose plant names
 local uniquePlantNames = {}
 for _, plant in ipairs(plantObjects:GetChildren()) do
-	if not table.find(uniquePlantNames, plant.Name) then
-		table.insert(uniquePlantNames, plant.Name)
-	end
+    if not uniquePlantNames[plant.Name] then
+        uniquePlantNames[plant.Name] = true
+    end
 end
 
-AutoFarmSection:AddDropdown({
-	Title = "Chọn loại cây để thu hoạch",
-	Values = uniquePlantNames,
-	Multi = true,
-	Default = {},
-	Callback = function(selected)
-		selectedPlantNames = selected
-	end
+local plantDropdown = AutoFarmSection:AddDropdown({
+    Title = "🌱 Chọn loại cây muốn thu hoạch",
+    Values = table.keys(uniquePlantNames),
+    Multi = true,
+    Callback = function(values)
+        selectedPlantNames = values
+    end
 })
 
--- Thêm toggle bật/tắt auto
+--// Fluent UI: Toggle auto collector
 AutoFarmSection:AddToggle({
-	Title = "Bật Auto Collect",
-	Default = false,
-	Callback = function(state)
-		collecting = state
-	end
+    Title = "🤖 Bật Auto Collect",
+    Default = false,
+    Callback = function(state)
+        collecting = state
+    end
 })
-
--- Hiển thị các loại cây đang chọn
-AutoFarmSection:AddParagraph({
-	Title = "Cây đã chọn",
-	Content = "(Chưa có)"
-})
-
--- Cập nhật Paragraph mỗi 0.5s
-task.spawn(function()
-	while true do
-		local paragraph = AutoFarmSection.Paragraphs[1]
-		if paragraph then
-			if #selectedPlantNames == 0 then
-				paragraph:SetContent("(Chưa có)")
-			else
-				paragraph:SetContent(table.concat(selectedPlantNames, ", "))
-			end
-		end
-		task.wait(0.5)
-	end
-end)
-
--- Hàm thu hoạch
-local function collectFruit(fruit)
-	if not fruit:IsA("Model") then return end
-	local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
-	if prompt then fireproximityprompt(prompt) return end
-	local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
-	if click then fireclickdetector(click) return end
-end
-
--- Auto loop
-task.spawn(function()
-	while true do
-		if collecting and #selectedPlantNames > 0 then
-			for _, plant in ipairs(plantObjects:GetChildren()) do
-				if table.find(selectedPlantNames, plant.Name) then
-					local fruits = plant:FindFirstChild("Fruits")
-					if fruits then
-						for _, fruit in ipairs(fruits:GetChildren()) do
-							collectFruit(fruit)
-							task.wait(0.05)
-						end
-					end
-				end
-			end
-		end
-		task.wait(0.1)
-	end
-end)
 
 --shop 
 -- SHOP SECTION: Mua Pet Egg
