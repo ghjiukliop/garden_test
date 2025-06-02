@@ -419,50 +419,7 @@ PlayTab:AddSection("Auto Farm"):AddDropdown("PlantSelector", {
 		end
 	end
 })
--- Tạo toggle Auto Farm ngay dưới dropdown
-PlayTab:AddSection("Auto Farm"):AddToggle("AutoFarmToggle", {
-    Title = "⚙️ Auto Farm",
-    Default = false,
-    Callback = function(state)
-        collecting = state
-        if collecting then
-            print("▶️ Auto Farm đã bật! Tự động thu thập trái cây từ cây đã chọn.")
-        else
-            print("⏸ Auto Farm đã tắt!")
-        end
-    end
-})
 
--- Hàm thu thập fruit
-local function collectFruit(fruit)
-    if not fruit:IsA("Model") then return end
-    local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
-    if prompt then fireproximityprompt(prompt) return end
-    local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
-    if click then fireclickdetector(click) return end
-end
-
--- Auto thu thập fruit khi bật toggle
-task.spawn(function()
-    while true do
-        if collecting and #selectedNames > 0 then
-            for _, plant in ipairs(plantsFolder:GetChildren()) do
-                if table.find(selectedNames, plant.Name) then
-                    local fruits = plant:FindFirstChild("Fruits")
-                    if fruits then
-                        for _, fruit in ipairs(fruits:GetChildren()) do
-                            collectFruit(fruit)
-                            task.wait(0.05)
-                        end
-                    end
-                end
-            end
-        end
-        task.wait(0.1)
-    end
-end)
-
---shop 
 -- SHOP SECTION: Mua Pet Egg
 
 
