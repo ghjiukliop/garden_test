@@ -383,7 +383,7 @@ local PlaySection = PlayTab:AddSection("Auto Farm")
 
 -- Dropdown chọn cây
 PlaySection:AddDropdown("PlantDropdown", {
-	Title = "🌱3 Chọn loại cây muốn farm",
+	Title = "🌱 Chọn loại cây muốn farm",
 	Values = dropdownValues,
 	Multi = true,
 	Default = {},
