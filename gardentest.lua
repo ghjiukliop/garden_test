@@ -332,87 +332,70 @@ end
 
 -- ...existing code...
 -- Dịch vụ-- Giả sử bạn đã có biến PlayTab (tab chính để thêm section)
-
--- Tìm farm người chơi và lấy danh sách cây (đảm bảo chạy trước phần UI)
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-
-local playerFarm = nil
+--// Tìm farm của người chơi
+local player = game:GetService("Players").LocalPlayer
 local farms = workspace:FindFirstChild("Farm")
+local playerFarm
+
 if farms then
-    for _, farm in ipairs(farms:GetChildren()) do
-        local ownerData = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data") and farm.Important.Data:FindFirstChild("Owner")
-        if ownerData and ownerData.Value == player.Name then
-            playerFarm = farm
-            break
-        end
-    end
+	for _, farm in ipairs(farms:GetChildren()) do
+		local owner = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data") and farm.Important.Data:FindFirstChild("Owner")
+		if owner and owner.Value == player.Name then
+			playerFarm = farm
+			break
+		end
+	end
 end
 
 if not playerFarm then
-    warn("❌ Không tìm thấy farm của người chơi.")
-    return
+	warn("⚠ Không tìm thấy farm của người chơi.")
+	return
 end
 
-local plantObjects = playerFarm.Important:FindFirstChild("Plants_Physical")
-if not plantObjects then
-    warn("❌ Không tìm thấy Plants_Physical trong farm.")
-    return
+--// Lấy danh sách tên cây (không trùng)
+local plantsFolder = playerFarm.Important:FindFirstChild("Plants_Physical")
+if not plantsFolder then
+	warn("⚠ Không tìm thấy Plants_Physical.")
+	return
 end
 
--- Lấy danh sách tên cây không trùng
-local availablePlantNames = {}
-local uniqueNames = {}
-for _, plant in ipairs(plantObjects:GetChildren()) do
-    if not uniqueNames[plant.Name] then
-        table.insert(availablePlantNames, plant.Name)
-        uniqueNames[plant.Name] = true
-    end
+local uniquePlantNames = {}
+for _, plant in ipairs(plantsFolder:GetChildren()) do
+	uniquePlantNames[plant.Name] = true
 end
 
-local selectedPlantNames = {}
+local plantDropdownValues = {}
+for name in pairs(uniquePlantNames) do
+	table.insert(plantDropdownValues, name)
+end
+table.sort(plantDropdownValues)
 
--- Tạo section Auto Farm trong tab Play
-local AutoFarmSection = PlayTab:AddSection("Auto Farm")
+--// Dropdown Fluent UI
+PlayTab:AddSection("Auto Farm"):AddDropdown("PlantSelector", {
+	Title = "🌿 Chọn cây cần farm",
+	Values = plantDropdownValues,
+	Multi = true,
+	Default = {}, -- Hoặc dùng cấu hình lưu trữ trước đó
+	Callback = function(selectedTable)
+		-- selectedTable là dạng { ["Apple"] = true, ["Strawberry"] = true, ... }
+		local selected = {}
+		for plantName, isSelected in pairs(selectedTable) do
+			if isSelected then
+				table.insert(selected, plantName)
+			end
+		end
 
--- Thêm Dropdown chọn cây cần farm (multi select)
-AutoFarmSection:AddDropdown("PlantDropdown", {
-    Title = "🌿22 Chọn cây cần farm ",
-    Values = availablePlantNames,
-    Multi = true,
-    Default = {},
-    Callback = function(values)
-        -- Debug log giá trị callback nhận
-        print("DEBUG selected values:", values)
-        
-        if type(values) ~= "table" then
-            values = {}
-        end
-
-        selectedPlantNames = values
-
-        if #selectedPlantNames == 0 then
-            print("❗ Bạn chưa chọn cây nào.")
-        else
-            print("🌿 Bạn đã chọn các cây: " .. table.concat(selectedPlantNames, ", "))
-        end
-    end
+		if #selected > 0 then
+			print("🌿 Bạn đã chọn các cây:")
+			for _, name in ipairs(selected) do
+				print(" - " .. name)
+			end
+		else
+			print("❗ Bạn chưa chọn cây nào.")
+		end
+	end
 })
 
--- Có thể thêm Toggle bật tắt Auto Farm (nếu cần)
-local collecting = false
-AutoFarmSection:AddToggle("AutoFarmToggle", {
-    Title = "Tự Động Thu Hoạch",
-    Default = false,
-    Callback = function(value)
-        collecting = value
-        print("[⚙️] Auto Farm: " .. (collecting and "BẬT" or "TẮT"))
-        
-        if collecting and #selectedPlantNames == 0 then
-            print("❗ Bạn chưa chọn cây nào để thu hoạch.")
-        end
-    end
-})
 
 --shop 
 -- SHOP SECTION: Mua Pet Egg
