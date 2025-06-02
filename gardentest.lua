@@ -399,14 +399,15 @@ PlayTab:AddSection("Auto Farm"):AddDropdown("AutoFruitDropdown", {
 })
 
 --// Toggle button bật/tắt auto farm
-PlayTab:AddButton({
-    Title = "🚜 Bật / Tắt Auto Farm Fruit",
-    Description = "Tự động thu thập trái từ cây đã chọn trong farm của bạn",
-    Callback = function()
-        autoFarmEnabled = not autoFarmEnabled
-        print(autoFarmEnabled and "✅ Auto Fruit đã BẬT" or "⛔ Auto Fruit đã TẮT")
+PlayTab:AddToggle("AutoFruitToggle", {
+    Title = "🚜 Auto Farm Fruit",
+    Default = false,
+    Callback = function(value)
+        autoFarmEnabled = value
+        print(value and "✅ Auto Fruit đã BẬT" or "⛔ Auto Fruit đã TẮT")
     end
 })
+
 
 --// Hàm thu thập trái
 local function collectFruit(fruit)
