@@ -331,120 +331,125 @@ local function setupSaveEvents()
 end
 
 -- ...existing code...
--- Dịch vụ-- Giả sử bạn đã có biến PlayTab (tab chính để thêm section)
+--// Dịch vụ
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local workspace = game:GetService("Workspace")
 
+--// Biến
 local selectedPlants = {}
 local collecting = false
 local playerFarm
 
--- Tìm farm thuộc về người chơi
+--// Fluent UI
+local Fluent = loadstring(game:HttpGet("https://github.com/CenteredSniper/Kenzen/blob/main/uilib/fluent/source.lua?raw=true"))()
+local Window = Fluent:CreateWindow({
+    Title = "🌿 Grow a Garden | Auto Farm",
+    SubTitle = "by bạn",
+    TabWidth = 120,
+    Size = UDim2.fromOffset(580, 400),
+    Acrylic = true,
+    Theme = "Aqua",
+    MinimizeKey = Enum.KeyCode.RightControl
+})
+
+local PlayTab = Window:AddTab({ Title = "Play" })
+local PlaySection = PlayTab:AddSection("Auto Farm")
+
+--// Tìm farm thuộc quyền sở hữu người chơi
 local farms = workspace:FindFirstChild("Farm")
 if farms then
-	for _, farm in ipairs(farms:GetChildren()) do
-		local owner = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data") and farm.Important.Data:FindFirstChild("Owner")
-		if owner and owner.Value == player.Name then
-			playerFarm = farm
-			break
-		end
-	end
+    for _, farm in ipairs(farms:GetChildren()) do
+        local owner = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data") and farm.Important.Data:FindFirstChild("Owner")
+        if owner and owner.Value == player.Name then
+            playerFarm = farm
+            break
+        end
+    end
 end
 
 if not playerFarm then
-	warn("❌ Không tìm thấy farm của bạn.")
-	return
+    warn("❌ Không tìm thấy farm của bạn.")
+    return
 end
 
 local plantsFolder = playerFarm.Important:FindFirstChild("Plants_Physical")
 if not plantsFolder then
-	warn("❌ Không tìm thấy Plants_Physical.")
-	return
+    warn("❌ Không tìm thấy Plants_Physical.")
+    return
 end
 
--- Lấy danh sách tên cây duy nhất
+--// Tạo danh sách cây không trùng tên
 local uniquePlantNames = {}
 for _, plant in ipairs(plantsFolder:GetChildren()) do
-	uniquePlantNames[plant.Name] = true
+    uniquePlantNames[plant.Name] = true
 end
 
 local dropdownValues = {}
-for plantName in pairs(uniquePlantNames) do
-	table.insert(dropdownValues, plantName)
+for name in pairs(uniquePlantNames) do
+    table.insert(dropdownValues, name)
 end
 table.sort(dropdownValues)
 
--- UI (giả định bạn đã tạo Fluent lib, ví dụ Fluent:CreateWindow...)
-local Fluent = loadstring(game:HttpGet("https://github.com/CenteredSniper/Kenzen/blob/main/uilib/fluent/source.lua?raw=true"))()
-local Window = Fluent:CreateWindow({Title = "🌿 Grow a Garden | Auto Farm", SubTitle = "by bạn", TabWidth = 120, Size = UDim2.fromOffset(580, 400), Acrylic = true, Theme = "Aqua", MinimizeKey = Enum.KeyCode.RightControl})
-local PlayTab = Window:AddTab({Title = "Play"})
-local PlaySection = PlayTab:AddSection("Auto Farm")
-
--- Dropdown chọn cây
+--// Dropdown chọn cây
 PlaySection:AddDropdown("PlantDropdown", {
-	Title = "🌱 Chọn loại cây muốn farm",
-	Values = dropdownValues,
-	Multi = true,
-	Default = {},
-	Callback = function(selectedTable)
-		selectedPlants = selectedTable
+    Title = "🌱 Chọn cây muốn farm",
+    Values = dropdownValues,
+    Multi = true,
+    Default = {},
+    Callback = function(selectedTable)
+        selectedPlants = selectedTable
+        local selectedNames = {}
+        for name, isSelected in pairs(selectedTable) do
+            if isSelected then
+                table.insert(selectedNames, name)
+            end
+        end
 
-		local selectedList = {}
-		for plantName, isSelected in pairs(selectedTable) do
-			if isSelected then
-				table.insert(selectedList, plantName)
-			end
-		end
-
-		if #selectedList > 0 then
-			print("✅ Đã chọn cây:")
-			for _, name in ipairs(selectedList) do
-				print(" - " .. name)
-			end
-		else
-			print("❗ Bạn chưa chọn cây nào.")
-		end
-	end
+        if #selectedNames > 0 then
+            print("✅ Đã chọn cây:")
+            for _, name in ipairs(selectedNames) do
+                print(" - " .. name)
+            end
+        else
+            print("❗ Bạn chưa chọn cây nào.")
+        end
+    end
 })
 
--- Nút Toggle Auto Farm
+--// Nút bật tắt auto
 PlaySection:AddButton("🔁 Toggle Auto Farm", function()
-	collecting = not collecting
-	if collecting then
-		print("✅ Auto Farm đã BẬT")
-	else
-		print("⏹️ Auto Farm đã TẮT")
-	end
+    collecting = not collecting
+    print(collecting and "✅ Auto Farm: BẬT" or "⏹️ Auto Farm: TẮT")
 end)
 
--- Hàm tự động thu hoạch fruit
+--// Hàm thu hoạch trái cây
 task.spawn(function()
-	while true do
-		if collecting and selectedPlants and next(selectedPlants) then
-			for _, plant in ipairs(plantsFolder:GetChildren()) do
-				if selectedPlants[plant.Name] then
-					local fruits = plant:FindFirstChild("Fruits")
-					if fruits then
-						for _, fruit in ipairs(fruits:GetChildren()) do
-							if fruit:IsA("Model") then
-								local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
-								if prompt then
-									fireproximityprompt(prompt)
-								else
-									local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
-									if click then
-										fireclickdetector(click)
-									end
-								end
-							end
-						end
-					end
-				end
-			end
-		end
-		task.wait(0.2)
-	end
+    while true do
+        if collecting and selectedPlants and next(selectedPlants) then
+            for _, plant in ipairs(plantsFolder:GetChildren()) do
+                if selectedPlants[plant.Name] then
+                    local fruits = plant:FindFirstChild("Fruits")
+                    if fruits then
+                        for _, fruit in ipairs(fruits:GetChildren()) do
+                            if fruit:IsA("Model") then
+                                local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
+                                if prompt then
+                                    fireproximityprompt(prompt)
+                                else
+                                    local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
+                                    if click then
+                                        fireclickdetector(click)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        task.wait(0.2)
+    end
 end)
 
 
