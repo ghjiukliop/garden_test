@@ -365,7 +365,7 @@ if not plantObjects then
 end
 
 -- 🧩 Thêm section Auto Farm trong tab Play
-local AutoFarmSection = PlayTab:AddSection("Auto Farm3")
+local AutoFarmSection = PlayTab:AddSection("Auto Farm4")
 
 -- 📋 Lấy danh sách tên cây duy nhất
 local availablePlantNames = {}
@@ -379,22 +379,28 @@ end
 
 -- 🔽 Dropdown chọn loại cây cần farm
 AutoFarmSection:AddDropdown("PlantDropdown", {
-	Title = "🌿 Chọn cây cần farm",
-	Values = availablePlantNames,
-	Multi = true,
-	Default = {},
-	Callback = function(values)
-		selectedPlantNames = values
-		if #selectedPlantNames > 0 then
-			print("✅ Bạn đã chọn các cây sau để thu hoạch:")
-			for _, v in ipairs(selectedPlantNames) do
-				print(" - " .. v)
-			end
-		else
-			print("⚠️ Bạn chưa chọn loại cây nào.")
-		end
-	end
+    Title = "🌿 Chọn cây cần farm",
+    Values = availablePlantNames,
+    Multi = true,
+    Default = {},
+    Callback = function(values)
+        -- Debug in ra kiểu dữ liệu và nội dung values mỗi lần callback được gọi
+        print("Dropdown callback gọi với giá trị:", typeof(values), values)
+        if typeof(values) ~= "table" or #values == 0 then
+            print("⚠️ Bạn chưa chọn loại cây nào.")
+            selectedPlantNames = {}
+            return
+        end
+
+        -- Nếu đến đây chắc chắn values là bảng có dữ liệu
+        selectedPlantNames = values
+        print("✅ Bạn đã chọn các cây sau để thu hoạch:")
+        for _, v in ipairs(selectedPlantNames) do
+            print(" - " .. v)
+        end
+    end
 })
+
 
 -- 🔘 Toggle bật/tắt auto farm
 AutoFarmSection:AddToggle("AutoFarmToggle", {
