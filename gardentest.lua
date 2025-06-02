@@ -365,7 +365,7 @@ if not plantObjects then
 end
 
 -- 🧩 Thêm section Auto Farm trong tab Play
-local AutoFarmSection = PlayTab:AddSection("Auto Farm")
+local AutoFarmSection = PlayTab:AddSection("Auto Farm3")
 
 -- 📋 Lấy danh sách tên cây duy nhất
 local availablePlantNames = {}
