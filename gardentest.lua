@@ -331,28 +331,10 @@ local function setupSaveEvents()
 end
 
 -- ...existing code...
--- Dịch vụ-- Giả sử bạn đã có biến PlayTab (tab chính để thêm section)
 local player = game:GetService("Players").LocalPlayer
 local farms = workspace:FindFirstChild("Farm")
-local playerFarm
 local autoFarmEnabled = false
-local selectedAutoPlants = {}
-
--- Tìm farm của người chơi
-if farms then
-	for _, farm in ipairs(farms:GetChildren()) do
-		local owner = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data") and farm.Important.Data:FindFirstChild("Owner")
-		if owner and owner.Value == player.Name then
-			playerFarm = farm
-			break
-		end
-	end
-end
-
-if not playerFarm then
-	warn("⚠ Không tìm thấy farm của người chơi.")
-	return
-end
+local selectedPlantsToFarm = {}
 
 -- Danh sách toàn bộ cây có thể hiển thị trong dropdown
 local allPlantNames = {
@@ -365,99 +347,117 @@ local allPlantNames = {
 	"Tomato", "Venus Fly Trap"
 }
 
--- Lấy thư mục cây trong farm
-local plantsFolder = playerFarm:FindFirstChild("Important") and playerFarm.Important:FindFirstChild("Plants_Physical")
-if not plantsFolder then
-	warn("⚠ Không tìm thấy Plants_Physical.")
-	return
+-- Tìm farm của người chơi
+local function getPlayerFarm()
+	if farms then
+		for _, farm in ipairs(farms:GetChildren()) do
+			local owner = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data") and farm.Important.Data:FindFirstChild("Owner")
+			if owner and owner.Value == player.Name then
+				return farm
+			end
+		end
+	end
+	return nil
 end
 
+-- Lấy thư mục cây trong farm của người chơi
+local function getPlantsFolder(farm)
+	if farm and farm:FindFirstChild("Important") then
+		return farm.Important:FindFirstChild("Plants_Physical")
+	end
+	return nil
+end
+
+-- Tạo dropdown trong Fluent UI
 local section = PlayTab:AddSection("Auto Farm")
 
--- Dropdown chọn cây
 section:AddDropdown("PlantSelector", {
-	Title = "🌿 Chọn cây cần kiểm tra",
+	Title = "🌿23 Chọn cây cần farm",
 	Values = allPlantNames,
 	Multi = true,
 	Default = {},
 	Callback = function(selectedTable)
-		selectedAutoPlants = {} -- cập nhật danh sách cây để auto farm
-
-		local selectedNames = {}
+		selectedPlantsToFarm = {}
 		for plantName, isSelected in pairs(selectedTable) do
 			if isSelected then
-				table.insert(selectedNames, plantName)
-				selectedAutoPlants[plantName] = true
+				table.insert(selectedPlantsToFarm, plantName)
 			end
 		end
 
-		if #selectedNames == 0 then
+		if #selectedPlantsToFarm == 0 then
 			print("❗ Bạn chưa chọn cây nào.")
-			return
-		end
-
-		print("🌱 Kết quả kiểm tra cây trong farm:")
-		for _, selectedPlantName in ipairs(selectedNames) do
-			local matchingPlants = {}
-			local fruitCount = 0
-
-			for _, plant in ipairs(plantsFolder:GetChildren()) do
-				if plant.Name == selectedPlantName then
-					table.insert(matchingPlants, plant)
-					local fruits = plant:FindFirstChild("Fruits")
-					if fruits then
-						for _, fruit in ipairs(fruits:GetChildren()) do
-							if fruit:IsA("Model") then
-								fruitCount = fruitCount + 1
-							end
-						end
-					end
-				end
-			end
-
-			if #matchingPlants > 0 then
-				print(string.format("✅ %s: %d cây | %d trái có thể thu hoạch", selectedPlantName, #matchingPlants, fruitCount))
-			else
-				print(string.format("❌ %s: Không có cây nào trong farm.", selectedPlantName))
+		else
+			print("🌱 Đã chọn cây để farm:")
+			for _, name in ipairs(selectedPlantsToFarm) do
+				print(" - " .. name)
 			end
 		end
 	end
 })
 
--- Toggle Auto Farm
-section:AddToggle("AutoFarmToggle", {
-	Title = "🤖 Bật/Tắt Auto Farm trái cây",
+-- Toggle bật/tắt auto farm
+section:AddToggle("ToggleAutoFarm", {
+	Title = "🟢 Bật/tắt Auto Farm Fruit",
 	Default = false,
-	Callback = function(state)
-		autoFarmEnabled = state
+	Callback = function(value)
+		autoFarmEnabled = value
+		print(value and "✅ Auto farm đã bật." or "⏸ Auto farm đã tắt.")
+	end
+})
 
-		if autoFarmEnabled then
-			print("✅ Auto Farm trái cây đã bật.")
-			-- Khởi động vòng lặp auto farm
-			task.spawn(function()
-				while autoFarmEnabled do
-					for _, plant in ipairs(plantsFolder:GetChildren()) do
-						if selectedAutoPlants[plant.Name] then
-							local fruitFolder = plant:FindFirstChild("Fruits")
-							if fruitFolder then
-								for _, fruit in ipairs(fruitFolder:GetChildren()) do
-									if fruit:IsA("Model") and fruit:FindFirstChild("Harvest") then
-										-- Gửi tín hiệu thu hoạch
-										fireproximityprompt(fruit.Harvest, 1)
+-- Hàm tự động farm fruit
+coroutine.wrap(function()
+	while true do
+		if autoFarmEnabled and #selectedPlantsToFarm > 0 then
+			local currentFarm = getPlayerFarm()
+			if not currentFarm then
+				warn("⚠ Không tìm thấy farm của người chơi.")
+				task.wait(3)
+			else
+				local plantsFolderCurrent = getPlantsFolder(currentFarm)
+				if not plantsFolderCurrent then
+					warn("⚠ Không tìm thấy Plants_Physical trong farm.")
+					task.wait(3)
+				else
+					local char = player.Character
+					if not char or not char:FindFirstChild("HumanoidRootPart") then
+						task.wait(1)
+					else
+						local hrp = char.HumanoidRootPart
+
+						-- Duyệt qua từng cây trong farm
+						for _, plant in ipairs(plantsFolderCurrent:GetChildren()) do
+							if table.find(selectedPlantsToFarm, plant.Name) then
+								local fruitsFolder = plant:FindFirstChild("Fruits")
+								if fruitsFolder then
+									for _, fruit in ipairs(fruitsFolder:GetChildren()) do
+										if fruit:IsA("Model") and fruit:FindFirstChild("2") and fruit["2"]:FindFirstChild("ProximityPrompt") then
+											-- Dịch chuyển đến fruit
+											if plant.PrimaryPart then
+												hrp.CFrame = plant.PrimaryPart.CFrame * CFrame.new(0, 5, 0)
+											else
+												-- fallback nếu plant không có PrimaryPart
+												hrp.CFrame = plant:GetModelCFrame() * CFrame.new(0,5,0)
+											end
+											task.wait(0.15)
+											-- Kích hoạt ProximityPrompt thu hoạch
+											fireproximityprompt(fruit["2"].ProximityPrompt)
+											task.wait(0.3)
+										end
 									end
 								end
 							end
 						end
+						task.wait(1) -- Đợi 1 giây trước lần lặp tiếp theo
 					end
-					task.wait(1) -- đợi 1 giây giữa mỗi vòng lặp
 				end
-			end)
+			end
 		else
-			print("⛔ Auto Farm trái cây đã tắt.")
+			task.wait(0.5)
 		end
+		task.wait()
 	end
-})
-
+end)()
 
 
 --shop 
