@@ -332,11 +332,16 @@ end
 
 -- ...existing code...
 -- Dịch vụ-- Giả sử bạn đã có biến PlayTab (tab chính để thêm section)
---// Tìm farm của người chơi
-local player = game:GetService("Players").LocalPlayer
-local farms = workspace:FindFirstChild("Farm")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local workspace = game:GetService("Workspace")
+
+local selectedPlants = {}
+local collecting = false
 local playerFarm
 
+-- Tìm farm thuộc về người chơi
+local farms = workspace:FindFirstChild("Farm")
 if farms then
 	for _, farm in ipairs(farms:GetChildren()) do
 		local owner = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data") and farm.Important.Data:FindFirstChild("Owner")
@@ -348,46 +353,53 @@ if farms then
 end
 
 if not playerFarm then
-	warn("⚠ Không tìm thấy farm của người chơi.")
+	warn("❌ Không tìm thấy farm của bạn.")
 	return
 end
 
---// Lấy danh sách tên cây (không trùng)
 local plantsFolder = playerFarm.Important:FindFirstChild("Plants_Physical")
 if not plantsFolder then
-	warn("⚠ Không tìm thấy Plants_Physical.")
+	warn("❌ Không tìm thấy Plants_Physical.")
 	return
 end
 
+-- Lấy danh sách tên cây duy nhất
 local uniquePlantNames = {}
 for _, plant in ipairs(plantsFolder:GetChildren()) do
 	uniquePlantNames[plant.Name] = true
 end
 
-local plantDropdownValues = {}
-for name in pairs(uniquePlantNames) do
-	table.insert(plantDropdownValues, name)
+local dropdownValues = {}
+for plantName in pairs(uniquePlantNames) do
+	table.insert(dropdownValues, plantName)
 end
-table.sort(plantDropdownValues)
+table.sort(dropdownValues)
 
---// Dropdown Fluent UI
-PlayTab:AddSection("Auto Farm"):AddDropdown("PlantSelector", {
-	Title = "🌿 Chọn cây cần farm",
-	Values = plantDropdownValues,
+-- UI (giả định bạn đã tạo Fluent lib, ví dụ Fluent:CreateWindow...)
+local Fluent = loadstring(game:HttpGet("https://github.com/CenteredSniper/Kenzen/blob/main/uilib/fluent/source.lua?raw=true"))()
+local Window = Fluent:CreateWindow({Title = "🌿 Grow a Garden | Auto Farm", SubTitle = "by bạn", TabWidth = 120, Size = UDim2.fromOffset(580, 400), Acrylic = true, Theme = "Aqua", MinimizeKey = Enum.KeyCode.RightControl})
+local PlayTab = Window:AddTab({Title = "Play"})
+local PlaySection = PlayTab:AddSection("Auto Farm")
+
+-- Dropdown chọn cây
+PlaySection:AddDropdown("PlantDropdown", {
+	Title = "🌱 Chọn loại cây muốn farm",
+	Values = dropdownValues,
 	Multi = true,
-	Default = {}, -- Hoặc dùng cấu hình lưu trữ trước đó
+	Default = {},
 	Callback = function(selectedTable)
-		-- selectedTable là dạng { ["Apple"] = true, ["Strawberry"] = true, ... }
-		local selected = {}
+		selectedPlants = selectedTable
+
+		local selectedList = {}
 		for plantName, isSelected in pairs(selectedTable) do
 			if isSelected then
-				table.insert(selected, plantName)
+				table.insert(selectedList, plantName)
 			end
 		end
 
-		if #selected > 0 then
-			print("🌿 Bạn đã chọn các cây:")
-			for _, name in ipairs(selected) do
+		if #selectedList > 0 then
+			print("✅ Đã chọn cây:")
+			for _, name in ipairs(selectedList) do
 				print(" - " .. name)
 			end
 		else
@@ -395,6 +407,45 @@ PlayTab:AddSection("Auto Farm"):AddDropdown("PlantSelector", {
 		end
 	end
 })
+
+-- Nút Toggle Auto Farm
+PlaySection:AddButton("🔁 Toggle Auto Farm", function()
+	collecting = not collecting
+	if collecting then
+		print("✅ Auto Farm đã BẬT")
+	else
+		print("⏹️ Auto Farm đã TẮT")
+	end
+end)
+
+-- Hàm tự động thu hoạch fruit
+task.spawn(function()
+	while true do
+		if collecting and selectedPlants and next(selectedPlants) then
+			for _, plant in ipairs(plantsFolder:GetChildren()) do
+				if selectedPlants[plant.Name] then
+					local fruits = plant:FindFirstChild("Fruits")
+					if fruits then
+						for _, fruit in ipairs(fruits:GetChildren()) do
+							if fruit:IsA("Model") then
+								local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
+								if prompt then
+									fireproximityprompt(prompt)
+								else
+									local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
+									if click then
+										fireclickdetector(click)
+									end
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+		task.wait(0.2)
+	end
+end)
 
 
 --shop 
