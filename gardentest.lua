@@ -331,129 +331,106 @@ local function setupSaveEvents()
 end
 
 -- ...existing code...
--- Dịch vụ-- Giả sử bạn đã có biến PlayTab (tab chính để thêm section)
-    --// Tìm farm của người chơi
-  local player = game:GetService("Players").LocalPlayer
+--// Dịch vụ
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+
+--// Biến chung
+local allPlantNames = {
+    "Apple", "Avocado", "Banana", "Beanstalk", "Blood Banana", "Blueberry", "Cacao", "Cactus", "Candy Blossom",
+    "Celestiberry", "Cherry Blossom", "Cherry OLD", "Coconut", "Corn", "Cranberry", "Crimson Vine", "Cursed Fruit",
+    "Dragon Fruit", "Durian", "Easter Egg", "Eggplant", "Ember Lily", "Foxglove", "Glowshroom", "Grape", "Hive Fruit",
+    "Lemon", "Lilac", "Lotus", "Mango", "Mint", "Moon Blossom", "Moon Mango", "Moon Melon", "Moonflower", "Moonglow",
+    "Nectarine", "Papaya", "Passionfruit", "Peach", "Pear", "Pepper", "Pineapple", "Pink Lily", "Purple Cabbage",
+    "Purple Dahlia", "Raspberry", "Rose", "Soul Fruit", "Starfruit", "Strawberry", "Succulent", "Sunflower",
+    "Tomato", "Venus Fly Trap"
+}
+
+local selectedPlantsToFarm = {}
+local autoFarmEnabled = false
+
+--// Tìm farm của người chơi
 local farms = workspace:FindFirstChild("Farm")
 local playerFarm
--- Biến trạng thái Auto Farm
-local collecting = false
-local selectedNames = {}
--- Tìm farm của người chơi
+
 if farms then
-	for _, farm in ipairs(farms:GetChildren()) do
-		local owner = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data") and farm.Important.Data:FindFirstChild("Owner")
-		if owner and owner.Value == player.Name then
-			playerFarm = farm
-			break
-		end
-	end
+    for _, farm in ipairs(farms:GetChildren()) do
+        local owner = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data") and farm.Important.Data:FindFirstChild("Owner")
+        if owner and owner.Value == player.Name then
+            playerFarm = farm
+            break
+        end
+    end
 end
 
 if not playerFarm then
-	warn("⚠ Không tìm thấy farm của người chơi.")
-	return
+    warn("❌ Không tìm thấy farm của bạn.")
+    return
 end
 
--- Danh sách toàn bộ cây có thể hiển thị trong dropdown
-local allPlantNames = {
-	"Apple", "Avocado", "Banana", "Beanstalk", "Blood Banana", "Blueberry", "Cacao", "Cactus", "Candy Blossom",
-	"Celestiberry", "Cherry Blossom", "Cherry OLD", "Coconut", "Corn", "Cranberry", "Crimson Vine", "Cursed Fruit",
-	"Dragon Fruit", "Durian", "Easter Egg", "Eggplant", "Ember Lily", "Foxglove", "Glowshroom", "Grape", "Hive Fruit",
-	"Lemon", "Lilac", "Lotus", "Mango", "Mint", "Moon Blossom", "Moon Mango", "Moon Melon", "Moonflower", "Moonglow",
-	"Nectarine", "Papaya", "Passionfruit", "Peach", "Pear", "Pepper", "Pineapple", "Pink Lily", "Purple Cabbage",
-	"Purple Dahlia", "Raspberry", "Rose", "Soul Fruit", "Starfruit", "Strawberry", "Succulent", "Sunflower",
-	"Tomato", "Venus Fly Trap"
-}
-
--- Lấy thư mục cây trong farm của người chơi
-local plantsFolder = playerFarm:FindFirstChild("Important") and playerFarm.Important:FindFirstChild("Plants_Physical")
+local plantsFolder = playerFarm.Important:FindFirstChild("Plants_Physical")
 if not plantsFolder then
-	warn("⚠ Không tìm thấy Plants_Physical.")
-	return
+    warn("❌ Không tìm thấy thư mục cây trồng trong farm.")
+    return
 end
 
-
-
-
--- Hàm thu thập fruit
-local function collectFruit(fruit)
-    if not fruit:IsA("Model") then return end
-    local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
-    if prompt then fireproximityprompt(prompt) return end
-    local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
-    if click then fireclickdetector(click) return end
-end
-
--- Tạo dropdown và toggle Auto Farm
-local autoFarmSection = PlayTab:AddSection("Auto Farm")
-
-autoFarmSection:AddDropdown("PlantSelector", {
-    Title = "🌿 Chọn cây cần kiểm tra",
+--// Dropdown Fluent UI
+PlayTab:AddSection("Auto Farm"):AddDropdown("AutoFruitDropdown", {
+    Title = "🍓 Chọn cây muốn auto thu thập trái",
     Values = allPlantNames,
     Multi = true,
     Default = {},
-    Callback = function(selectedTable)
-        selectedNames = {}
-        for plantName, isSelected in pairs(selectedTable) do
+    Callback = function(selected)
+        -- Reset danh sách đã chọn
+        selectedPlantsToFarm = {}
+        for plantName, isSelected in pairs(selected) do
             if isSelected then
-                table.insert(selectedNames, plantName)
+                table.insert(selectedPlantsToFarm, plantName)
             end
         end
 
-        if #selectedNames == 0 then
-            print("❗ Bạn chưa chọn cây nào.")
-            return
-        end
-
-        print("🌱 Kết quả kiểm tra cây trong farm:")
-        for _, selectedPlantName in ipairs(selectedNames) do
-            local matchingPlants = {}
-            local fruitCount = 0
-
-            for _, plant in ipairs(plantsFolder:GetChildren()) do
-                if plant.Name == selectedPlantName then
-                    table.insert(matchingPlants, plant)
-
-                    local fruits = plant:FindFirstChild("Fruits")
-                    if fruits then
-                        for _, fruit in ipairs(fruits:GetChildren()) do
-                            if fruit:IsA("Model") then
-                                fruitCount = fruitCount + 1
-                            end
-                        end
-                    end
-                end
-            end
-
-            if #matchingPlants > 0 then
-                print(string.format("✅ %s: %d cây | %d trái có thể thu hoạch", selectedPlantName, #matchingPlants, fruitCount))
-            else
-                print(string.format("❌ %s: Không có cây nào trong farm.", selectedPlantName))
-            end
-        end
-    end
-})
-
-autoFarmSection:AddToggle("AutoFarmToggle", {
-    Title = "⚙️ Auto Farm",
-    Default = false,
-    Callback = function(state)
-        collecting = state
-        if collecting then
-            print("▶️ Auto Farm đã bật! Tự động thu thập trái cây từ cây đã chọn.")
+        if #selectedPlantsToFarm == 0 then
+            print("🔴 Bạn chưa chọn cây nào.")
         else
-            print("⏸ Auto Farm đã tắt!")
+            print("✅ Cây được chọn để auto:", table.concat(selectedPlantsToFarm, ", "))
         end
     end
 })
 
--- Auto thu thập fruit khi bật toggle
+--// Toggle button bật/tắt auto farm
+PlayTab:AddButton({
+    Title = "🚜 Bật / Tắt Auto Farm Fruit",
+    Description = "Tự động thu thập trái từ cây đã chọn trong farm của bạn",
+    Callback = function()
+        autoFarmEnabled = not autoFarmEnabled
+        print(autoFarmEnabled and "✅ Auto Fruit đã BẬT" or "⛔ Auto Fruit đã TẮT")
+    end
+})
+
+--// Hàm thu thập trái
+local function collectFruit(fruit)
+    if not fruit:IsA("Model") then return end
+
+    local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
+    if prompt then
+        fireproximityprompt(prompt)
+        return
+    end
+
+    local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
+    if click then
+        fireclickdetector(click)
+        return
+    end
+end
+
+--// Vòng lặp Auto Farm Fruit
 task.spawn(function()
     while true do
-        if collecting and #selectedNames > 0 then
+        if autoFarmEnabled and #selectedPlantsToFarm > 0 then
             for _, plant in ipairs(plantsFolder:GetChildren()) do
-                if table.find(selectedNames, plant.Name) then
+                if table.find(selectedPlantsToFarm, plant.Name) then
                     local fruits = plant:FindFirstChild("Fruits")
                     if fruits then
                         for _, fruit in ipairs(fruits:GetChildren()) do
@@ -464,9 +441,10 @@ task.spawn(function()
                 end
             end
         end
-        task.wait(0.1)
+        task.wait(0.2)
     end
 end)
+
 -- SHOP SECTION: Mua Pet Egg
 
 
