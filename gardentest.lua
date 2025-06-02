@@ -373,7 +373,7 @@ end
 
 -- Tạo dropdown trong Fluent UI
 PlayTab:AddSection("Auto Farm"):AddDropdown("PlantSelector", {
-	Title = "🌿 Chọn cây cần kiểm tra",
+	Title = "🌿 2Chọn cây cần kiểm tra",
 	Values = allPlantNames,
 	Multi = true,
 	Default = {},
@@ -390,7 +390,7 @@ PlayTab:AddSection("Auto Farm"):AddDropdown("PlantSelector", {
 			return
 		end
 
-		print("🌱 Kết quả kiểm tra cây trong farm:")
+		print("🌱 22Kết quả kiểm tra cây trong farm:")
 
 		for _, selectedPlantName in ipairs(selectedNames) do
 			local matchingPlants = {}
