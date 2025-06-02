@@ -332,10 +332,11 @@ end
 
 -- ...existing code...
 -- Dịch vụ-- Giả sử bạn đã có biến PlayTab (tab chính để thêm section)
-    --// Tìm farm của người chơi
-  local player = game:GetService("Players").LocalPlayer
+local player = game:GetService("Players").LocalPlayer
 local farms = workspace:FindFirstChild("Farm")
 local playerFarm
+local autoFarmEnabled = false
+local selectedAutoPlants = {}
 
 -- Tìm farm của người chơi
 if farms then
@@ -364,24 +365,29 @@ local allPlantNames = {
 	"Tomato", "Venus Fly Trap"
 }
 
--- Lấy thư mục cây trong farm của người chơi
+-- Lấy thư mục cây trong farm
 local plantsFolder = playerFarm:FindFirstChild("Important") and playerFarm.Important:FindFirstChild("Plants_Physical")
 if not plantsFolder then
 	warn("⚠ Không tìm thấy Plants_Physical.")
 	return
 end
 
--- Tạo dropdown trong Fluent UI
-PlayTab:AddSection("Auto Farm"):AddDropdown("PlantSelector", {
-	Title = "🌿 2Chọn cây cần kiểm tra",
+local section = PlayTab:AddSection("Auto Farm")
+
+-- Dropdown chọn cây
+section:AddDropdown("PlantSelector", {
+	Title = "🌿 Chọn cây cần kiểm tra",
 	Values = allPlantNames,
 	Multi = true,
 	Default = {},
 	Callback = function(selectedTable)
+		selectedAutoPlants = {} -- cập nhật danh sách cây để auto farm
+
 		local selectedNames = {}
 		for plantName, isSelected in pairs(selectedTable) do
 			if isSelected then
 				table.insert(selectedNames, plantName)
+				selectedAutoPlants[plantName] = true
 			end
 		end
 
@@ -390,8 +396,7 @@ PlayTab:AddSection("Auto Farm"):AddDropdown("PlantSelector", {
 			return
 		end
 
-		print("🌱 22Kết quả kiểm tra cây trong farm:")
-
+		print("🌱 Kết quả kiểm tra cây trong farm:")
 		for _, selectedPlantName in ipairs(selectedNames) do
 			local matchingPlants = {}
 			local fruitCount = 0
@@ -399,15 +404,14 @@ PlayTab:AddSection("Auto Farm"):AddDropdown("PlantSelector", {
 			for _, plant in ipairs(plantsFolder:GetChildren()) do
 				if plant.Name == selectedPlantName then
 					table.insert(matchingPlants, plant)
-
 					local fruits = plant:FindFirstChild("Fruits")
-                        if fruits then
-                        for _, fruit in ipairs(fruits:GetChildren()) do
-                            if fruit:IsA("Model") then
-                                fruitCount = fruitCount + 1
-                            end
-                        end
-                    end
+					if fruits then
+						for _, fruit in ipairs(fruits:GetChildren()) do
+							if fruit:IsA("Model") then
+								fruitCount = fruitCount + 1
+							end
+						end
+					end
 				end
 			end
 
@@ -419,6 +423,41 @@ PlayTab:AddSection("Auto Farm"):AddDropdown("PlantSelector", {
 		end
 	end
 })
+
+-- Toggle Auto Farm
+section:AddToggle("AutoFarmToggle", {
+	Title = "🤖 Bật/Tắt Auto Farm trái cây",
+	Default = false,
+	Callback = function(state)
+		autoFarmEnabled = state
+
+		if autoFarmEnabled then
+			print("✅ Auto Farm trái cây đã bật.")
+			-- Khởi động vòng lặp auto farm
+			task.spawn(function()
+				while autoFarmEnabled do
+					for _, plant in ipairs(plantsFolder:GetChildren()) do
+						if selectedAutoPlants[plant.Name] then
+							local fruitFolder = plant:FindFirstChild("Fruits")
+							if fruitFolder then
+								for _, fruit in ipairs(fruitFolder:GetChildren()) do
+									if fruit:IsA("Model") and fruit:FindFirstChild("Harvest") then
+										-- Gửi tín hiệu thu hoạch
+										fireproximityprompt(fruit.Harvest, 1)
+									end
+								end
+							end
+						end
+					end
+					task.wait(1) -- đợi 1 giây giữa mỗi vòng lặp
+				end
+			end)
+		else
+			print("⛔ Auto Farm trái cây đã tắt.")
+		end
+	end
+})
+
 
 
 --shop 
