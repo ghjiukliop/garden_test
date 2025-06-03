@@ -459,7 +459,7 @@ end)
 -- Đảm bảo EventTab đã được tạo trước đó như bạn viết
 
 -- Tạo section bên trong EventTab
-local HoneySection = EventTab:AddSection("🍯7 Honey Event")
+local HoneySection = EventTab:AddSection("🍯8 Honey Event")
 
 -- Biến bật/tắt thu thập
 local collectPollinated = false
