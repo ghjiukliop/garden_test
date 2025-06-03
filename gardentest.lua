@@ -463,10 +463,8 @@ local HoneySection = EventTab:AddSection("🍯6 Honey Event")
 
 -- Biến bật/tắt thu thập
 local collectPollinated = false
-
--- Toggle thu thập fruit có thuộc tính Pollinated
 HoneySection:AddToggle("AutoCollectPollinated", {
-	Title= "Auto Collect Pollinated Fruit",
+	Title = "Auto Collect Pollinated Fruit",
 	Default = false,
 	Tooltip = "Chỉ thu thập các loại fruit có thuộc tính Pollinated",
 }):OnChanged(function(state)
@@ -478,15 +476,14 @@ HoneySection:AddToggle("AutoCollectPollinated", {
 	})
 end)
 
-
-
+-- Vòng lặp tự động tìm và thu thập fruit có Pollinated
 task.spawn(function()
 	while true do
 		if collectPollinated then
 			local player = game:GetService("Players").LocalPlayer
 			local farms = workspace:FindFirstChild("Farm")
 
-			if farms then
+			if farms and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
 				for _, farm in ipairs(farms:GetChildren()) do
 					local owner = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data") and farm.Important.Data:FindFirstChild("Owner")
 					if owner and owner.Value == player.Name then
@@ -497,6 +494,12 @@ task.spawn(function()
 								if fruits then
 									for _, fruit in ipairs(fruits:GetChildren()) do
 										if fruit:GetAttribute("Pollinated") == true then
+											local fruitPos = fruit:FindFirstChild("PrimaryPart") or fruit:FindFirstChild("Main") or fruit:FindFirstChildWhichIsA("BasePart")
+											if fruitPos then
+												player.Character:MoveTo(fruitPos.Position)
+												task.wait(0.2)
+											end
+
 											local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
 											if prompt then
 												fireproximityprompt(prompt)
@@ -518,6 +521,7 @@ task.spawn(function()
 		task.wait(0.5)
 	end
 end)
+
 
 -- SHOP SECTION: Mua Pet Egg
 
