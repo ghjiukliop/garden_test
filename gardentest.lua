@@ -459,7 +459,7 @@ end)
 -- Đảm bảo EventTab đã được tạo trước đó như bạn viết
 
 -- Tạo section bên trong EventTab
-local HoneySection = EventTab:AddSection("🍯6 Honey Event")
+local HoneySection = EventTab:AddSection("🍯7 Honey Event")
 
 -- Biến bật/tắt thu thập
 local collectPollinated = false
@@ -520,6 +520,84 @@ task.spawn(function()
 		end
 		task.wait(0.5)
 	end
+end)
+
+-- Giả sử bạn đã có:
+-- local EventTab = Window:AddTab({...})
+-- local HoneySection = EventTab:AddSection("🍯 Honey Event")
+
+local collectAndUsePollinated = false
+
+HoneySection:AddToggle("CollectAndUsePollinated", {
+    Title = "Auto Use Pollinated Fruit",
+    Default = false,
+    Tooltip = "Tự động cầm fruit có Pollinated và sử dụng máy",
+}):OnChanged(function(state)
+    collectAndUsePollinated = state
+    Fluent:Notify({
+        Title = "Honey Event",
+        Content = state and "🟢 Đang tự động sử dụng fruit có 'Pollinated'" or "🔴 Đã dừng sử dụng",
+        Duration = 4
+    })
+end)
+
+task.spawn(function()
+    local Players = game:GetService("Players")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local myPlayer = Players.LocalPlayer
+    local backpack = myPlayer:WaitForChild("Backpack")
+    local honeyMachineEvent = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("HoneyMachineService_RE")
+
+    local function isItemStillHeld(itemName)
+        local character = myPlayer.Character
+        if not character then return false end
+        for _, item in ipairs(character:GetChildren()) do
+            if item:IsA("Tool") and item.Name == itemName then
+                return true
+            end
+        end
+        return false
+    end
+
+    while true do
+        if collectAndUsePollinated then
+            local foundItem = nil
+            for _, tool in ipairs(backpack:GetChildren()) do
+                if tool:IsA("Tool") and string.find(tool.Name, "Pollinated") then
+                    foundItem = tool
+                    break
+                end
+            end
+
+            if foundItem then
+                local itemName = foundItem.Name
+                local character = myPlayer.Character
+                if character then
+                    -- Cầm item lên
+                    foundItem.Parent = character
+                    print("👐 Đã cầm fruit:", itemName)
+
+                    -- Gửi sự kiện tương tác máy
+                    honeyMachineEvent:FireServer("MachineInteract")
+                    print("⚙️ Đã gửi MachineInteract")
+
+                    task.wait(1.5)
+
+                    if isItemStillHeld(itemName) then
+                        print("⏳ Vẫn còn cầm fruit. Chờ 2 phút 30 giây rồi thử lại...")
+                        task.wait(150)
+                    else
+                        print("✅ Thành công! Item đã được xử lý.")
+                    end
+                end
+            else
+                print("🔍 Không tìm thấy fruit có 'Pollinated' trong Backpack.")
+                task.wait(5)
+            end
+        else
+            task.wait(0.5)
+        end
+    end
 end)
 
 
