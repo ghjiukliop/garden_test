@@ -462,15 +462,17 @@ end)
 --  -- TAB EVENT 
 
 -- Giả sử bạn đã có EventTab rồi:
-local HoneySection = EventTab:AddSection("🍯 Honey Event")
+local HoneySection = EventTab:AddSection("🍯 3Honey Event ")
 
 local collectPollinated = false
 
-HoneySection:AddToggle("AutoCollectPollinated", {
+local toggle = HoneySection:AddToggle("AutoCollectPollinated", {
 	Text = "Auto Collect Pollinated Fruit",
 	Default = false,
 	Tooltip = "Chỉ thu thập các loại fruit có thuộc tính Pollinated",
-}):OnChanged(function(state)
+})
+
+toggle:OnChanged(function(state)
 	collectPollinated = state
 	Fluent:Notify({
 		Title = "Honey Event",
@@ -478,6 +480,7 @@ HoneySection:AddToggle("AutoCollectPollinated", {
 		Duration = 4
 	})
 end)
+
 
 task.spawn(function()
 	while true do
