@@ -207,6 +207,18 @@ local PlayTab = Window:AddTab({
     Title = "Play",
     Icon = "rbxassetid://7734053495" -- Bạn có thể thay icon khác nếu muốn
 })
+
+local EventTab = Window:AddTab({
+    Title = "Event",
+    Icon = "rbxassetid://12290495271" -- Bạn có thể đổi sang icon phù hợp khác
+})
+
+local Ev = Window:AddTab({
+    Title = "Play",
+    Icon = "rbxassetid://9158926514" -- Bạn có thể thay icon khác nếu muốn
+})
+
+
 -- Thêm tab Shop
 local ShopTab = Window:AddTab({
     Title = "Shop",
@@ -444,6 +456,66 @@ task.spawn(function()
         end
         task.wait(0.2)
     end
+end)
+
+
+--  -- TAB EVENT 
+
+-- Giả sử bạn đã có EventTab rồi:
+local HoneySection = EventTab:AddSection("🍯 Honey Event")
+
+local collectPollinated = false
+
+HoneySection:AddToggle("AutoCollectPollinated", {
+	Text = "Auto Collect Pollinated Fruit",
+	Default = false,
+	Tooltip = "Chỉ thu thập các loại fruit có thuộc tính Pollinated",
+}):OnChanged(function(state)
+	collectPollinated = state
+	Fluent:Notify({
+		Title = "Honey Event",
+		Content = state and "🟢 Đang tự động thu thập fruit có 'Pollinated'" or "🔴 Đã dừng thu thập",
+		Duration = 4
+	})
+end)
+
+task.spawn(function()
+	while true do
+		if collectPollinated then
+			local player = game:GetService("Players").LocalPlayer
+			local farms = workspace:FindFirstChild("Farm")
+
+			if farms then
+				for _, farm in ipairs(farms:GetChildren()) do
+					local owner = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data") and farm.Important.Data:FindFirstChild("Owner")
+					if owner and owner.Value == player.Name then
+						local plants = farm.Important:FindFirstChild("Plants_Physical")
+						if plants then
+							for _, plant in ipairs(plants:GetChildren()) do
+								local fruits = plant:FindFirstChild("Fruits")
+								if fruits then
+									for _, fruit in ipairs(fruits:GetChildren()) do
+										if fruit:GetAttribute("Pollinated") == true then
+											local prompt = fruit:FindFirstChildWhichIsA("ProximityPrompt", true)
+											if prompt then
+												fireproximityprompt(prompt)
+											else
+												local click = fruit:FindFirstChildWhichIsA("ClickDetector", true)
+												if click then
+													fireclickdetector(click)
+												end
+											end
+										end
+									end
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+		task.wait(0.5)
+	end
 end)
 
 -- SHOP SECTION: Mua Pet Egg
