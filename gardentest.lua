@@ -523,15 +523,12 @@ task.spawn(function()
 end)
 
 -- Giả sử bạn đã có:
--- local EventTab = Window:AddTab({...})
--- local HoneySection = EventTab:AddSection("🍯 Honey Event")
-
 local collectAndUsePollinated = false
 
 HoneySection:AddToggle("CollectAndUsePollinated", {
     Title = "Auto Use Pollinated Fruit",
     Default = false,
-    Tooltip = "Tự động cầm fruit có Pollinated và sử dụng máy",
+    Tooltip = "Tự động cầm fruit có Pollinated và sử dụng máy liên tục",
 }):OnChanged(function(state)
     collectAndUsePollinated = state
     Fluent:Notify({
@@ -577,21 +574,17 @@ task.spawn(function()
                     foundItem.Parent = character
                     print("👐 Đã cầm fruit:", itemName)
 
-                    -- Gửi sự kiện tương tác máy
-                    honeyMachineEvent:FireServer("MachineInteract")
-                    print("⚙️ Đã gửi MachineInteract")
-
-                    task.wait(1.5)
-
-                    if isItemStillHeld(itemName) then
-                        print("⏳ Vẫn còn cầm fruit. Chờ 2 phút 30 giây rồi thử lại...")
-                        task.wait(150)
-                    else
-                        print("✅ Thành công! Item đã được xử lý.")
+                    -- Liên tục sử dụng cho tới khi fruit biến mất khỏi tay
+                    while isItemStillHeld(itemName) and collectAndUsePollinated do
+                        honeyMachineEvent:FireServer("MachineInteract")
+                        print("⚙️ Đã gửi MachineInteract cho", itemName)
+                        task.wait(1.5)  -- Chờ 1.5 giây giữa các lần sử dụng
                     end
+
+                    print("✅ Fruit đã được sử dụng hết hoặc bị biến mất:", itemName)
                 end
             else
-                print("🔍 Không tìm thấy fruit có 'Pollinated' trong Backpack.")
+                print("🔍 Không còn fruit có 'Pollinated' trong Backpack, đợi 5 giây...")
                 task.wait(5)
             end
         else
@@ -599,7 +592,6 @@ task.spawn(function()
         end
     end
 end)
-
 
 -- SHOP SECTION: Mua Pet Egg
 
