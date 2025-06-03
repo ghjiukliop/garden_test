@@ -207,18 +207,6 @@ local PlayTab = Window:AddTab({
     Title = "Play",
     Icon = "rbxassetid://7734053495" -- Bạn có thể thay icon khác nếu muốn
 })
-
-local EventTab = Window:AddTab({
-    Title = "Event",
-    Icon = "rbxassetid://12290495271" -- Bạn có thể đổi sang icon phù hợp khác
-})
-
-local Ev = Window:AddTab({
-    Title = "Play",
-    Icon = "rbxassetid://9158926514" -- Bạn có thể thay icon khác nếu muốn
-})
-
-
 -- Thêm tab Shop
 local ShopTab = Window:AddTab({
     Title = "Shop",
@@ -458,8 +446,6 @@ task.spawn(function()
     end
 end)
 
-
---  -- TAB EVENT 
 -- SHOP SECTION: Mua Pet Egg
 
 
