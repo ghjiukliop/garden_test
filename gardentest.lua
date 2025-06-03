@@ -459,14 +459,14 @@ end)
 -- Đảm bảo EventTab đã được tạo trước đó như bạn viết
 
 -- Tạo section bên trong EventTab
-local HoneySection = EventTab:AddSection("🍯4 Honey Event")
+local HoneySection = EventTab:AddSection("🍯6 Honey Event")
 
 -- Biến bật/tắt thu thập
 local collectPollinated = false
 
 -- Toggle thu thập fruit có thuộc tính Pollinated
 HoneySection:AddToggle("AutoCollectPollinated", {
-	Text = "Auto Collect Pollinated Fruit",
+	Title= "Auto Collect Pollinated Fruit",
 	Default = false,
 	Tooltip = "Chỉ thu thập các loại fruit có thuộc tính Pollinated",
 }):OnChanged(function(state)
