@@ -344,7 +344,7 @@ local RunService = game:GetService("RunService")
 
 --// Biến chung
 local allPlantNames = {
-    "Apple", "Avocado", "Banana", "Beanstalk", "Blood Banana", "Blueberry", "Cacao", "Cactus", "Candy Blossom",
+    "Apple", "Avocado", "Bamboo", "Banana", "Beanstalk", "Blood Banana", "Blueberry", "Cacao", "Cactus", "Candy Blossom",
     "Celestiberry", "Cherry Blossom", "Cherry OLD", "Coconut", "Corn", "Cranberry", "Crimson Vine", "Cursed Fruit",
     "Dragon Fruit", "Durian", "Easter Egg", "Eggplant", "Ember Lily", "Foxglove", "Glowshroom", "Grape", "Hive Fruit",
     "Lemon", "Lilac", "Lotus", "Mango", "Mint", "Moon Blossom", "Moon Mango", "Moon Melon", "Moonflower", "Moonglow",
@@ -383,7 +383,7 @@ end
 
 --// Dropdown Fluent UI
 PlayTab:AddSection("Auto Farm"):AddDropdown("AutoFruitDropdown", {
-    Title = "🍓 Chọn cây muốn auto thu thập trái",
+    Title = "1 Chọn cây muốn auto thu thập trái",
     Values = allPlantNames,
     Multi = true,
     Default = {},
@@ -433,16 +433,37 @@ local function collectFruit(fruit)
 end
 
 --// Vòng lặp Auto Farm Fruit
+-- Vòng lặp Auto Farm Fruit
 task.spawn(function()
     while true do
         if autoFarmEnabled and #selectedPlantsToFarm > 0 then
             for _, plant in ipairs(plantsFolder:GetChildren()) do
                 if table.find(selectedPlantsToFarm, plant.Name) then
                     local fruits = plant:FindFirstChild("Fruits")
+
                     if fruits then
+                        -- Nếu cây có thư mục "Fruits", tiến hành thu thập
                         for _, fruit in ipairs(fruits:GetChildren()) do
                             collectFruit(fruit)
                             task.wait(0.05)
+                        end
+                    else
+                        -- Nếu cây không có "Fruits", tìm tất cả cây cùng tên và thu thập
+                        warn("❌ Cây '" .. plant.Name .. "' không có trái. Đang tìm các cây cùng tên...")
+
+                        for _, otherPlant in ipairs(plantsFolder:GetChildren()) do
+                            if otherPlant.Name == plant.Name and otherPlant:FindFirstChild("Fruits") then
+                                print("🔄 Đã tìm thấy cây cùng loại có trái:", otherPlant.Name)
+                                
+                                -- Thu thập trái từ cây cùng tên
+                                local otherFruits = otherPlant:FindFirstChild("Fruits")
+                                if otherFruits then
+                                    for _, fruit in ipairs(otherFruits:GetChildren()) do
+                                        collectFruit(fruit)
+                                        task.wait(0.05)
+                                    end
+                                end
+                            end
                         end
                     end
                 end
