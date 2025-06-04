@@ -442,27 +442,23 @@ task.spawn(function()
                     local fruits = plant:FindFirstChild("Fruits")
 
                     if fruits then
-                        -- Nếu cây có thư mục "Fruits", tiến hành thu thập
+                        -- Nếu cây có thư mục "Fruits", tiến hành thu thập trái
                         for _, fruit in ipairs(fruits:GetChildren()) do
                             collectFruit(fruit)
                             task.wait(0.05)
                         end
                     else
-                        -- Nếu cây không có "Fruits", tìm tất cả cây cùng tên và thu thập
-                        warn("❌ Cây '" .. plant.Name .. "' không có trái. Đang tìm các cây cùng tên...")
+                        -- Nếu cây không có "Fruits", thu thập chính cây đó
+                        warn("❌ Cây '" .. plant.Name .. "' không có trái! Đang thu thập chính cây...")
 
-                        for _, otherPlant in ipairs(plantsFolder:GetChildren()) do
-                            if otherPlant.Name == plant.Name and otherPlant:FindFirstChild("Fruits") then
-                                print("🔄 Đã tìm thấy cây cùng loại có trái:", otherPlant.Name)
-                                
-                                -- Thu thập trái từ cây cùng tên
-                                local otherFruits = otherPlant:FindFirstChild("Fruits")
-                                if otherFruits then
-                                    for _, fruit in ipairs(otherFruits:GetChildren()) do
-                                        collectFruit(fruit)
-                                        task.wait(0.05)
-                                    end
-                                end
+                        -- Kích hoạt ProximityPrompt hoặc ClickDetector trên cây
+                        local prompt = plant:FindFirstChildWhichIsA("ProximityPrompt", true)
+                        if prompt then
+                            fireproximityprompt(prompt)
+                        else
+                            local click = plant:FindFirstChildWhichIsA("ClickDetector", true)
+                            if click then
+                                fireclickdetector(click)
                             end
                         end
                     end
