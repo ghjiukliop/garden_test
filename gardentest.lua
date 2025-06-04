@@ -593,6 +593,77 @@ task.spawn(function()
     end
 end)
 
+
+-- Danh sách item cần mua
+local honeyItemsList = {
+    "Flower Seed Pack", "Nectarine", "Hive Fruit", "Honey Sprinkler",
+    "Bee Egg", "Bee Crate", "Honey Comb", "Bee Chair",
+    "Honey Torch", "Honey Walkway"
+}
+
+-- Lưu item đã chọn
+local selectedHoneyItems = {}
+
+-- Dropdown chọn item cần mua
+HoneySection:AddDropdown("HoneyItemDropdown", {
+    Title = "🛒 Chọn item muốn auto mua",
+    Values = honeyItemsList,
+    Multi = true,
+    Default = {},
+    Callback = function(selected)
+        selectedHoneyItems = {}  -- Reset danh sách
+        for itemName, isSelected in pairs(selected) do
+            if isSelected then
+                table.insert(selectedHoneyItems, itemName)
+            end
+        end
+
+        if #selectedHoneyItems == 0 then
+            print("🔴 Bạn chưa chọn item nào.")
+        else
+            print("✅ Item đã chọn:", table.concat(selectedHoneyItems, ", "))
+        end
+    end
+})
+
+-- Biến bật/tắt Auto Buy
+local autoBuyEnabled = false
+
+HoneySection:AddToggle("AutoBuyHoneyItems", {
+    Title = "⚡ Auto Buy Honey Items",
+    Default = false,
+    Tooltip = "Tự động mua các item đã chọn",
+}):OnChanged(function(state)
+    autoBuyEnabled = state
+
+    Fluent:Notify({
+        Title = "Honey Event",
+        Content = state and "🟢 Đang tự động mua item" or "🔴 Đã dừng auto buy",
+        Duration = 4
+    })
+end)
+
+-- Vòng lặp auto mua item
+task.spawn(function()
+    while true do
+        if autoBuyEnabled then
+            local ReplicatedStorage = game:GetService("ReplicatedStorage")
+            local buyEvent = ReplicatedStorage:FindFirstChild("GameEvents") and ReplicatedStorage.GameEvents:FindFirstChild("BuyEventShopStock")
+
+            if buyEvent then
+                for _, itemName in ipairs(selectedHoneyItems) do
+                    local args = { [1] = itemName }
+                    buyEvent:FireServer(unpack(args))
+                    print("🛒 Đã mua:", itemName)
+                    task.wait(0.5) -- Chờ giữa các lần mua để tránh spam
+                end
+            else
+                warn("❌ Không tìm thấy sự kiện mua hàng!")
+            end
+        end
+        task.wait(1) -- Lặp kiểm tra mỗi giây
+    end
+end)
 -- SHOP SECTION: Mua Pet Egg
 
 
