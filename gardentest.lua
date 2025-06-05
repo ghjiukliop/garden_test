@@ -85,7 +85,7 @@ end
 
 -- Hệ thống lưu trữ cấu hình
 local ConfigSystem = {}
-ConfigSystem.FileName = "AnimeSagaConfig_" .. game:GetService("Players").LocalPlayer.Name .. ".json"
+ConfigSystem.FileName = "GAGConfig_" .. game:GetService("Players").LocalPlayer.Name .. ".json"
 ConfigSystem.DefaultConfig = {
     -- Các cài đặt mặc định
     UITheme = "Amethyst",
@@ -336,6 +336,8 @@ local function setupSaveEvents()
     end
 end
 
+
+
 -- ...existing code...
 --// Dịch vụ
 local Players = game:GetService("Players")
@@ -354,7 +356,7 @@ local allPlantNames = {
 }
 
 local selectedPlantsToFarm = {}
-local autoFarmEnabled = false
+local autoFarmEnabled = false   
 
 --// Tìm farm của người chơi
 local farms = workspace:FindFirstChild("Farm")
@@ -468,7 +470,81 @@ task.spawn(function()
         task.wait(0.2)
     end
 end)
+-- planting
+----------------------------------------------------------------
+-- 1) SECTION trong PlayTab
+----------------------------------------------------------------
+local PlantSection = PlayTab:AddSection("🌱 Auto Plant Seed")
 
+----------------------------------------------------------------
+-- 2) Danh sách SEED cố định
+----------------------------------------------------------------
+local AllSeedNames = {
+    "Apple","Avocado","Bamboo","Banana","Beanstalk","Blood Banana","Blue Lollipop","Blueberry","Cacao","Cactus",
+    "Candy Blossom","Candy Sunflower","Carrot","Celestiberry","Cherry Blossom","Chocolate Carrot","Coconut","Corn",
+    "Cranberry","Crimson Vine","Crocus","Cursed Fruit","Daffodil","Dandelion","Dragon Fruit","Durian","Easter Egg",
+    "Eggplant","Ember Lily","Foxglove","Glowshroom","Grape","Hive Fruit","Lemon","Lilac","Lotus","Mango",
+    "Mega Mushroom","Mint","Moon Blossom","Moon Mango","Moon Melon","Moonflower","Moonglow","Mushroom","Nectarine",
+    "Nightshade","Orange Tulip","Papaya","Passionfruit","Peach","Pear","Pepper","Pineapple","Pink Lily","Pink Tulip",
+    "Pumpkin","Purple Cabbage","Purple Dahlia","Raspberry","Red Lollipop","Rose","Soul Fruit","Starfruit",
+    "Strawberry","Succulent","Sunflower","Super","Tomato","Venus Fly Trap","Watermelon"
+}
+
+----------------------------------------------------------------
+-- 3) Helpers: dict ⇆ array  (Fluent Multi-select trả về dict)
+----------------------------------------------------------------
+local function dictToArray(dict)
+    local arr = {}
+    for name, picked in pairs(dict) do
+        if picked then table.insert(arr, name) end
+    end
+    return arr
+end
+
+----------------------------------------------------------------
+-- 4) Hàm kiểm tra seed trong Backpack
+----------------------------------------------------------------
+local function seedExistsInBackpack(seedName)
+    local backpack = player:FindFirstChild("Backpack")
+    if not backpack then return false end
+    for _, tool in ipairs(backpack:GetChildren()) do
+        if tool:IsA("Tool") and tool:GetAttribute("Seed") == seedName then
+            return true
+        end
+    end
+    return false
+end
+
+----------------------------------------------------------------
+-- 5) Tạo DROPDOWN
+----------------------------------------------------------------
+local seedDropdown = PlantSection:AddDropdown("SelectSeedsToCheck", {
+    Title   = "Chọn các Seed cần kiểm tra",
+    Values  = AllSeedNames, -- luôn đủ 75 seed
+    Multi   = true,
+    Default = {}            -- không tick sẵn
+})
+
+----------------------------------------------------------------
+-- 6) Sự kiện khi NGƯỜI DÙNG thay đổi lựa chọn
+----------------------------------------------------------------
+seedDropdown:OnChanged(function(dictValues)           -- dictValues = {["Bamboo"]=true, ...}
+    if not dictValues or not next(dictValues) then
+        print("⚠️ Bạn chưa chọn seed nào.")
+        return
+    end
+
+    local pickedSeeds = dictToArray(dictValues)
+
+    print("🔎 Kết quả kiểm tra Backpack:")
+    for _, seedName in ipairs(pickedSeeds) do
+        if seedExistsInBackpack(seedName) then
+            print("🟢 Có:", seedName)
+        else
+            print("🔴 Không có:", seedName)
+        end
+    end
+end)
 
 --  -- TAB EVENT 
 
