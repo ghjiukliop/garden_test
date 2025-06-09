@@ -873,7 +873,7 @@ local EggShopSection = ShopTab:AddSection("Egg Shop")
 local eggEvent = game:GetService("ReplicatedStorage").GameEvents.BuyPetEgg
 
 local ALL_EGGS = {
-    "Common Egg", "Uncommon Egg", "Rare Egg", "Legendary Egg", "Mythic Egg"
+    "Common Egg", "Uncommon Egg", "Rare Egg", "Legendary Egg", "Bug Egg", "Mythic Egg"
 }
 
 local selectedEggs = ConfigSystem.CurrentConfig.EggSelectedList or {}
