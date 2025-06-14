@@ -94,7 +94,14 @@ ConfigSystem.DefaultConfig = {
     -- Cài đặt log
     LogsEnabled = true,
     WarningsEnabled = true,
-    
+    -- Cài đặt cho Auto Buy Seed
+    SeedAutoBuyEnabled = false,
+    SeedSelectedList   = {},
+
+    -- Cài đặt cho Auto Buy Gear
+    GearAutoBuyEnabled = false,
+    GearSelectedList = {}, -- Mảng các gear đã chọn
+
     -- Cài đặt cho Auto Buy Egg
     EggAutoBuyEnabled = false,
     EggSelectedList = {}, -- Mảng các egg đã chọn để auto mua
@@ -864,6 +871,177 @@ task.spawn(function()
         task.wait(1) -- Lặp kiểm tra mỗi giây
     end
 end)
+
+-- SEED SHOP 
+-- =========================
+-- 🌱  SEED  SHOP  SECTION
+-- =========================
+
+-- 1️⃣  Tạo section trong tab Shop
+local SeedShopSection = ShopTab:AddSection("Seed Shop")
+
+-- 2️⃣  Danh sách seed có thể mua
+local seedList = {
+    "Carrot", "Strawberry", "Blueberry", "Orange Tulip", "Tomato", "Daffodil",
+    "Corn", "Watermelon", "Pumpkin", "Apple", "Bamboo", "Coconut",
+    "Cactus", "Dragon Fruit", "Mango", "Mushroom", "Grape", "Pepper",
+    "Cacao", "Beanstalk", "Ember Lily","Sugar Apple"
+}
+
+-- 3️⃣  Biến lưu & load từ ConfigSystem
+local selectedSeeds      = ConfigSystem.CurrentConfig.SeedSelectedList      or {}
+local autoBuySeedEnabled = ConfigSystem.CurrentConfig.SeedAutoBuyEnabled    or false
+
+-- 4️⃣  Dropdown chọn seed
+local seedDropdown = SeedShopSection:AddDropdown("SeedSelector", {
+    Title   = "🛒 Chọn seed để auto mua",
+    Values  = seedList,
+    Multi   = true,
+    Default = (function()
+        local dict = {}
+        for _, v in ipairs(selectedSeeds) do dict[v] = true end
+        return dict
+    end)()
+})
+
+seedDropdown:OnChanged(function(dict)
+    selectedSeeds = {}
+    for name, picked in pairs(dict) do
+        if picked then table.insert(selectedSeeds, name) end
+    end
+    ConfigSystem.CurrentConfig.SeedSelectedList = selectedSeeds
+    ConfigSystem.SaveConfig()
+
+    if #selectedSeeds == 0 then
+        print("🔴 Chưa chọn seed nào.")
+    else
+        print("✅ Seed đã chọn:", table.concat(selectedSeeds, ", "))
+    end
+end)
+
+-- 5️⃣  Toggle bật / tắt auto buy
+SeedShopSection:AddToggle("AutoBuySeedToggle", {
+    Title   = "⚡ Auto Buy Seed",
+    Default = autoBuySeedEnabled,
+    Tooltip = "Tự động mua các seed đã chọn"
+}):OnChanged(function(state)
+    autoBuySeedEnabled = state
+    ConfigSystem.CurrentConfig.SeedAutoBuyEnabled = state
+    ConfigSystem.SaveConfig()
+
+    Fluent:Notify({
+        Title    = "Seed AutoBuy",
+        Content  = state and "🟢 Đang tự động mua seed" or "🔴 Đã tắt auto buy",
+        Duration = 4
+    })
+end)
+
+-- 6️⃣  Vòng lặp auto mua seed
+task.spawn(function()
+    local RS        = game:GetService("ReplicatedStorage")
+    local seedEvent = RS:WaitForChild("GameEvents"):WaitForChild("BuySeedStock")
+
+    while true do
+        if autoBuySeedEnabled and #selectedSeeds > 0 then
+            for _, seedName in ipairs(selectedSeeds) do
+                seedEvent:FireServer(seedName)
+                print("🌱 Đã mua:", seedName)
+                task.wait(0.5) -- giảm spam remote
+            end
+        end
+        task.wait(1) -- kiểm tra mỗi giây
+    end
+end)
+
+
+-- GEEAR SHOP 
+
+-- ⚙️ GEAR SHOP SECTION
+local GearShopSection = ShopTab:AddSection("Gear Shop")
+
+-- 🎒 Danh sách Gear có thể mua
+local gearList = {
+    "Basic Sprinkler",
+    "Advanced Sprinkler",
+    "Godly Sprinkler",
+    "Master Sprinkler",
+    "Trowel",
+    "Friendship Pot",
+    "Harvest Tool",
+    "Favorite Tool",
+    "Recall Wrench",
+    "Watering Can"
+}
+
+-- 📦 Biến lưu item được chọn
+local selectedGears = ConfigSystem.CurrentConfig.GearSelectedList or {}
+local autoBuyGearEnabled = ConfigSystem.CurrentConfig.GearAutoBuyEnabled or false
+
+-- 🔽 Dropdown chọn gear
+local gearDropdown = GearShopSection:AddDropdown("GearSelector", {
+    Title = "🛒 Chọn gear để auto mua",
+    Values = gearList,
+    Multi = true,
+    Default = (function()
+        local dict = {}
+        for _, v in ipairs(selectedGears) do dict[v] = true end
+        return dict
+    end)()
+})
+
+gearDropdown:OnChanged(function(dict)
+    selectedGears = {}
+    for name, picked in pairs(dict) do
+        if picked then table.insert(selectedGears, name) end
+    end
+    ConfigSystem.CurrentConfig.GearSelectedList = selectedGears
+    ConfigSystem.SaveConfig()
+
+    if #selectedGears == 0 then
+        print("🔴 Chưa chọn gear nào.")
+    else
+        print("✅ Gear đã chọn:", table.concat(selectedGears, ", "))
+    end
+end)
+
+-- 🔘 Toggle bật auto mua gear
+GearShopSection:AddToggle("AutoBuyGearToggle", {
+    Title = "⚡ Auto Buy Gear",
+    Default = autoBuyGearEnabled,
+    Tooltip = "Tự động mua các gear đã chọn"
+}):OnChanged(function(val)
+    autoBuyGearEnabled = val
+    ConfigSystem.CurrentConfig.GearAutoBuyEnabled = val
+    ConfigSystem.SaveConfig()
+
+    Fluent:Notify({
+        Title = "Gear AutoBuy",
+        Content = val and "🟢 Đang tự động mua gear" or "🔴 Đã tắt auto buy",
+        Duration = 4
+    })
+end)
+
+-- 🔁 Vòng lặp auto mua gear
+task.spawn(function()
+    while true do
+        if autoBuyGearEnabled and #selectedGears > 0 then
+            local ReplicatedStorage = game:GetService("ReplicatedStorage")
+            local gearEvent = ReplicatedStorage:FindFirstChild("GameEvents") and ReplicatedStorage.GameEvents:FindFirstChild("BuyGearStock")
+
+            if gearEvent then
+                for _, gearName in ipairs(selectedGears) do
+                    gearEvent:FireServer(gearName)
+                    print("🛒 Đã mua:", gearName)
+                    task.wait(0.5) -- tránh spam
+                end
+            else
+                warn("❌ Không tìm thấy sự kiện BuyGearStock")
+            end
+        end
+        task.wait(1)
+    end
+end)
+
 -- SHOP SECTION: Mua Pet Egg
 
 -- Tạo section "Egg Shop"
@@ -944,6 +1122,8 @@ task.spawn(function()
         task.wait(1)
     end
 end)
+
+--end
 -- Tích hợp với SaveManager
 SaveManager:SetLibrary(Fluent)
 InterfaceManager:SetLibrary(Fluent)
