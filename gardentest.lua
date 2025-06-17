@@ -97,7 +97,9 @@ ConfigSystem.DefaultConfig = {
     -- Cài đặt cho Auto Buy Seed
     SeedAutoBuyEnabled = false,
     SeedSelectedList   = {},
-
+  -- Cài đặt cho Auto Craft Seed
+    AutoCraftSeedEnabled = false,
+    AutoCraftSeedItem = "Suncoil",
     -- Cài đặt cho Auto Buy Gear
     GearAutoBuyEnabled = false,
     GearSelectedList = {}, -- Mảng các gear đã chọn
@@ -872,6 +874,143 @@ task.spawn(function()
     end
 end)
 
+-- Seed crafting event 
+-- 📦 Auto Craft System for SeedEventWorkbench
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local backpack = player:WaitForChild("Backpack")
+
+local CraftingRemote = ReplicatedStorage.GameEvents:WaitForChild("CraftingGlobalObjectService")
+local Workbench = workspace.Interaction.UpdateItems.NewCrafting:WaitForChild("SeedEventCraftingWorkBench")
+local WorkbenchID = "SeedEventWorkbench"
+
+-- 🌱 Tạo giao diện Seed Crafting trong EventTab
+local SeedCraftingSection = EventTab:AddSection("🌾 Seed Crafting")
+
+local CraftableItems = {
+    "Crafters Seed Pack", "Manuka Flower", "Dandelion", "Lumira",
+    "Honeysuckle", "Bee Balm", "Nectar Thorn", "Suncoil"
+}
+
+local selectedItem = ConfigSystem.CurrentConfig.AutoCraftSeedItem
+local autoCraftEnabled = ConfigSystem.CurrentConfig.AutoCraftSeedEnabled
+
+-- 🔽 Dropdown chọn item để craft
+SeedCraftingSection:AddDropdown("CraftItemSelector", {
+    Title = "Chọn item cần craft",
+    Values = CraftableItems,
+    Default = selectedItem,
+}):OnChanged(function(v)
+    selectedItem = v
+    ConfigSystem.CurrentConfig.AutoCraftSeedItem = v
+    ConfigSystem.SaveConfig()
+end)
+
+-- 🔘 Toggle bật/tắt Auto Craft
+SeedCraftingSection:AddToggle("AutoCraftToggle", {
+    Title = "Tự động craft item",
+    Default = autoCraftEnabled,
+    Tooltip = "Sẽ đợi hết thời gian, sau đó craft lại liên tục",
+}):OnChanged(function(val)
+    autoCraftEnabled = val
+    ConfigSystem.CurrentConfig.AutoCraftSeedEnabled = val
+    ConfigSystem.SaveConfig()
+    print(val and ("🟢 Đã bật Auto Craft: " .. selectedItem) or "🔴 Đã tắt Auto Craft")
+end)
+
+-- 🔎 Tìm tool trong backpack hoặc character theo tên bắt đầu
+local function findToolByName(name)
+    for _, tool in ipairs(backpack:GetChildren()) do
+        if tool:IsA("Tool") and (tool.Name == name or tool.Name:match("^" .. name)) then
+            return tool
+        end
+    end
+    for _, tool in ipairs(player.Character:GetChildren()) do
+        if tool:IsA("Tool") and (tool.Name == name or tool.Name:match("^" .. name)) then
+            return tool
+        end
+    end
+    return nil
+end
+
+-- 🧠 Thực hiện craft item
+local function craftItem(itemName)
+    local Recipes = {
+        ["Crafters Seed Pack"] = {"Flower Seed Pack"},
+        ["Manuka Flower"] = {"Daffodil Seed", "Orange Tulip Seed"},
+        ["Dandelion"] = {"Bamboo", "Bamboo", "Manuka Flower Seed"},
+        ["Lumira"] = {"Pumpkin", "Pumpkin", "Dandelion Seed", "Flower Seed Pack"},
+        ["Honeysuckle"] = {"Pink Lily Seed", "Purple Dahlia Seed"},
+        ["Bee Balm"] = {"Crocus", "Lavender"},
+        ["Nectar Thorn"] = {"Cactus", "Cactus", "Cactus Seed", "Nectarshade Seed"},
+        ["Suncoil"] = {"Crocus", "Daffodil", "Dandelion", "Pink Lily"},
+    }
+
+    local recipe = Recipes[itemName]
+    if not recipe then
+        warn("Không tìm thấy công thức cho:", itemName)
+        return
+    end
+
+    print("📦 Kiểm tra nguyên liệu cho:", itemName)
+
+    -- B1: SetRecipe
+    CraftingRemote:FireServer("SetRecipe", Workbench, WorkbenchID, itemName)
+    task.wait(0.25)
+
+    -- B2: Input nguyên liệu theo thứ tự
+    for slot, materialName in ipairs(recipe) do
+        local tool = findToolByName(materialName)
+        if tool then
+            local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid:EquipTool(tool)
+                task.wait(0.15)
+
+                CraftingRemote:FireServer("InputItem", Workbench, WorkbenchID, slot, {
+                    ItemType = "Seed Pack",
+                    ItemData = {} -- Không cần UUID nữa
+                })
+
+                task.wait(0.2)
+            else
+                warn("⚠ Không tìm thấy Humanoid để trang bị tool: ", materialName)
+            end
+        else
+            warn("❌ Thiếu nguyên liệu:", materialName)
+        end
+    end
+
+    -- B3: Gửi Craft
+    CraftingRemote:FireServer("Craft", Workbench, WorkbenchID)
+    print("🛠️ Đã gửi lệnh craft:", itemName)
+end
+
+-- 🔁 Vòng lặp tự động craft
+RunService.Heartbeat:Connect(function()
+    if autoCraftEnabled and selectedItem ~= "" then
+        local BenchTable = Workbench.SeedEventCraftingWorkBench.Model:FindFirstChild("BenchTable")
+        local TimerLabel = BenchTable and BenchTable:FindFirstChild("CraftingBillboardGui") and BenchTable.CraftingBillboardGui:FindFirstChild("Timer")
+
+        if TimerLabel and TimerLabel.Text and TimerLabel.Text ~= "" and TimerLabel.Text ~= "00:00" then
+            local mins, secs = string.match(TimerLabel.Text, "(%d+):(%d+)")
+            local duration = tonumber(mins) * 60 + tonumber(secs)
+            task.wait(duration + 0.5)
+        end
+
+        CraftingRemote:FireServer("Claim", Workbench, WorkbenchID, 1)
+        task.wait(0.2)
+
+        craftItem(selectedItem)
+    end
+end)
+
+
+
+--end
 -- SEED SHOP 
 -- =========================
 -- 🌱  SEED  SHOP  SECTION
