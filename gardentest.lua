@@ -1275,6 +1275,36 @@ task.spawn(function()
 end)
 
 --end
+
+-- ANTI AFK 
+task.spawn(function()
+    local VirtualUser = game:GetService("VirtualUser")
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+
+    -- PC: Dùng VirtualUser
+    Players.LocalPlayer.Idled:Connect(function()
+        print("🛡️ Anti-AFK (PC): Gửi input chuột phải")
+        VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+    end)
+
+    -- Android (hoặc mọi nền tảng): nhúc nhẹ nhân vật định kỳ mỗi 18 phút
+    while true do
+        local char = Players.LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            local original = hrp.CFrame
+            hrp.CFrame = original + Vector3.new(0, 0.1, 0)
+            task.wait(0.2)
+            hrp.CFrame = original
+            print("📱 Anti-AFK (Mobile): Nhúc nhẹ nhân vật để giữ kết nối")
+        end
+        task.wait(60 * 18) -- 18 phút
+    end
+end)
+
 -- Tích hợp với SaveManager
 SaveManager:SetLibrary(Fluent)
 InterfaceManager:SetLibrary(Fluent)
